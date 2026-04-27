@@ -32,6 +32,8 @@ export function useGeolocation(): GeoState {
               name: g.name,
               region: g.region,
               postcode: g.postcode,
+              country: g.country,
+              countryCode: g.countryCode,
               latitude: g.latitude,
               longitude: g.longitude,
               isAutoDetected: true,
