@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import type { Location, LocationConditions } from "@/lib/types";
 import { fetchPollenAndAqi, fetchWeather } from "@/lib/api";
-import { buildNarrative, buildOutfit, buildUmbrella } from "@/lib/narrative";
+import { buildNarrative, buildOutfit, buildUmbrella, buildPerfume } from "@/lib/narrative";
 
 async function fetchConditions(loc: Location): Promise<LocationConditions> {
   const [weather, air] = await Promise.all([
@@ -16,6 +16,7 @@ async function fetchConditions(loc: Location): Promise<LocationConditions> {
     narrative: buildNarrative(weather, air.pollen, air.aqi),
     outfit: buildOutfit(weather),
     umbrella: buildUmbrella(weather),
+    perfume: buildPerfume(weather, air.pollen),
     fetchedAt: Date.now(),
   };
 }

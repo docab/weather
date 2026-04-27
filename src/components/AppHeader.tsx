@@ -17,7 +17,7 @@ export function AppHeader({ onRefresh, refreshing }: Props) {
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight">PollenWatch</h1>
-            <p className="-mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">UK</p>
+            <p className="-mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Global</p>
           </div>
         </div>
         <div className="flex items-center gap-1">

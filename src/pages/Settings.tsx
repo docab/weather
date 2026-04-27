@@ -67,7 +67,7 @@ export default function Settings() {
     const result = await Notification.requestPermission();
     if (result === "granted") {
       setPrefs(p => ({ ...p, enabled: true }));
-      new Notification("PollenWatch UK", {
+      new Notification("PollenWatch", {
         body: "Notifications enabled — you'll get morning briefings.",
         icon: "/favicon.ico",
       });
@@ -239,7 +239,7 @@ export default function Settings() {
           </p>
         </Section>
 
-        <p className="text-center text-[10px] text-muted-foreground">v1.0 · PollenWatch UK</p>
+        <p className="text-center text-[10px] text-muted-foreground">v1.0 · PollenWatch</p>
       </main>
 
       <AddLocationDialog open={addOpen} onOpenChange={setAddOpen} onSelect={addLocation} />

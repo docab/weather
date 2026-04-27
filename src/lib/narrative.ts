@@ -95,3 +95,49 @@ export function buildUmbrella(weather: WeatherData): string {
   if (weather.precipProb >= 20) return "Maybe carry one, just in case";
   return "No umbrella needed";
 }
+
+/**
+ * Pick a fragrance family that flatters the day's weather.
+ * Heat blooms top notes, cold needs warmth & projection, damp air
+ * lifts greens & ozonics, dry crisp days suit citrus & aromatic.
+ */
+export function buildPerfume(weather: WeatherData, pollen: PollenData): string {
+  const t = weather.feelsLike;
+  const wet = weather.precipProb >= 50;
+  const humid = weather.humidity >= 75;
+  const windy = weather.windSpeed >= 18;
+  const hayfever = pollen.level === "high" || pollen.level === "very-high";
+
+  // Hay-fever days — keep it gentle, skin-close, no heady florals
+  if (hayfever) {
+    return "Skin-close musk or clean cotton — keep florals light so they don't compete with the pollen";
+  }
+
+  // Hot & sticky
+  if (t >= 24 && humid) {
+    return "Aquatic or marine — salt, cucumber, neroli. Something that breathes (think Acqua di Giò, CK One)";
+  }
+  // Hot & dry
+  if (t >= 24) {
+    return "Bright citrus & green tea — bergamot, lemon, vetiver. Fresh and weightless";
+  }
+  // Warm pleasant
+  if (t >= 18) {
+    return "Fig, iris or soft floral — Philosykos energy, easy in the heat without sulking";
+  }
+  // Mild
+  if (t >= 12) {
+    if (wet) return "Petrichor & green — moss, violet leaf, a touch of rain (Fille en Aiguilles, L'Eau d'Issey)";
+    return "Aromatic fougère — lavender, rosemary, a clean woody base. Crisp and put-together";
+  }
+  // Cool
+  if (t >= 6) {
+    return "Smoky woods or leather — cedar, vetiver, a little incense. Warmth that projects in the cold air";
+  }
+  // Cold
+  if (t >= 0) {
+    return "Amber, oud or vanilla — rich resinous warmth that holds up to the chill";
+  }
+  // Freezing
+  return "Heavy gourmand or oud — tonka, benzoin, animalic woods. Nothing delicate survives this";
+}

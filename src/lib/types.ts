@@ -5,6 +5,8 @@ export interface Location {
   name: string;
   region?: string;
   postcode?: string;
+  country?: string;
+  countryCode?: string;
   latitude: number;
   longitude: number;
   isAutoDetected?: boolean;
@@ -44,6 +46,19 @@ export interface WeatherHour {
   weatherCode: number;
 }
 
+export interface WeatherDay {
+  date: string;
+  high: number;
+  low: number;
+  precipProb: number;
+  precipSum: number;
+  weatherCode: number;
+  uvIndexMax: number;
+  windMax: number;
+  sunrise?: string;
+  sunset?: string;
+}
+
 export interface WeatherAlert {
   id: string;
   title: string;
@@ -66,7 +81,9 @@ export interface WeatherData {
   conditions: string;
   isDay: boolean;
   hourly: WeatherHour[];
+  daily: WeatherDay[];
   alerts: WeatherAlert[];
+  timezone: string;
 }
 
 export interface LocationConditions {
@@ -77,6 +94,7 @@ export interface LocationConditions {
   narrative: string;
   outfit: string;
   umbrella: string;
+  perfume: string;
   fetchedAt: number;
 }
 

@@ -1,7 +1,7 @@
 {
-  "name": "PollenWatch UK",
+  "name": "PollenWatch",
   "short_name": "PollenWatch",
-  "description": "Hyper-local UK pollen, AQI & weather briefings",
+  "description": "Hyper-local pollen, AQI & weather briefings worldwide",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0D1117",
