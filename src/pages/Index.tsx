@@ -93,7 +93,7 @@ const Index = () => {
             </div>
             <h2 className="text-lg font-semibold">Where are you?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Allow location access for an instant local briefing — or add a UK town manually.
+              Allow location access for an instant local briefing — or add a city manually.
             </p>
             {geo.error && (
               <p className="mt-2 inline-flex items-center gap-1 text-xs text-destructive">
