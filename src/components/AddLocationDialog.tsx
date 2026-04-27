@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Loader2 } from "lucide-react";
-import { geocodeUK, makeLocation, type GeoResult } from "@/lib/api";
+import { geocodePlace, makeLocation, type GeoResult } from "@/lib/api";
 import type { Location } from "@/lib/types";
 
 interface Props {
@@ -24,9 +24,9 @@ export function AddLocationDialog({ open, onOpenChange, onSelect }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await geocodeUK(q);
+      const res = await geocodePlace(q);
       setResults(res);
-      if (!res.length) setError("No UK matches. Try a town name or postcode.");
+      if (!res.length) setError("No matches. Try a city, town or postcode.");
     } catch {
       setError("Search failed. Check your connection.");
     } finally {
@@ -46,13 +46,13 @@ export function AddLocationDialog({ open, onOpenChange, onSelect }: Props) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add a location</DialogTitle>
-          <DialogDescription>Search by UK town, city or postcode.</DialogDescription>
+          <DialogDescription>Search any city or town worldwide — UK postcodes also work.</DialogDescription>
         </DialogHeader>
         <form onSubmit={search} className="flex gap-2">
           <Input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="e.g. Brighton or BN1 1AA"
+            placeholder="e.g. Tokyo, Lisbon, BN1 1AA"
             autoFocus
           />
           <Button type="submit" size="icon" disabled={loading}>
@@ -72,7 +72,7 @@ export function AddLocationDialog({ open, onOpenChange, onSelect }: Props) {
                   <div className="flex-1">
                     <div className="font-medium">{r.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {[r.postcode, r.region].filter(Boolean).join(" · ")}
+                      {[r.postcode, r.region, r.country].filter(Boolean).join(" · ")}
                     </div>
                   </div>
                 </button>

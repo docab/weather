@@ -1,13 +1,16 @@
 import type { LocationConditions } from "@/lib/types";
-import { describeWeather, skyClass } from "@/lib/weatherCodes";
+import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export function WeatherHero({ conditions }: { conditions: LocationConditions }) {
   const { weather } = conditions;
   const info = describeWeather(weather.weatherCode, weather.isDay);
+  const SkyIcon = info.Icon;
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl border border-border p-6 shadow-card", skyClass(info.sky))}>
+    <div
+      className="relative overflow-hidden rounded-2xl border border-border p-6 shadow-card"
+      style={dynamicSkyStyle(info.sky, weather.feelsLike)}
+    >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/30" />
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
@@ -23,7 +26,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
               </div>
             </div>
           </div>
-          <div className="text-6xl">{info.icon}</div>
+          <SkyIcon className="h-20 w-20 text-foreground/85 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]" strokeWidth={1.4} />
         </div>
 
         <div className="mt-5 flex items-center gap-3 text-sm">
