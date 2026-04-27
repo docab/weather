@@ -1,5 +1,5 @@
 import type { LocationConditions } from "@/lib/types";
-import { Sparkles, Shirt, Umbrella } from "lucide-react";
+import { Sparkles, Shirt, Umbrella, FlaskConical } from "lucide-react";
 
 export function NarrativeCard({ conditions }: { conditions: LocationConditions }) {
   return (
@@ -13,6 +13,7 @@ export function NarrativeCard({ conditions }: { conditions: LocationConditions }
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <Recommendation icon={<Shirt className="h-4 w-4" />} label="Wear" text={conditions.outfit} />
         <Recommendation icon={<Umbrella className="h-4 w-4" />} label="Umbrella" text={conditions.umbrella} />
+        <Recommendation icon={<FlaskConical className="h-4 w-4" />} label="Fragrance" text={conditions.perfume} />
       </div>
     </div>
   );

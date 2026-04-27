@@ -313,6 +313,8 @@ export function makeLocation(g: GeoResult, opts: { id?: string; isAutoDetected?:
     name: g.name,
     region: g.region,
     postcode: g.postcode,
+    country: g.country,
+    countryCode: g.countryCode,
     latitude: g.latitude,
     longitude: g.longitude,
     isAutoDetected: opts.isAutoDetected,
