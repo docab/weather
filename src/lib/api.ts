@@ -8,6 +8,8 @@ export interface GeoResult {
   name: string;
   region?: string;
   postcode?: string;
+  country?: string;
+  countryCode?: string;
   latitude: number;
   longitude: number;
 }
@@ -15,11 +17,11 @@ export interface GeoResult {
 const POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
 const PARTIAL_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?$/i;
 
-export async function geocodeUK(query: string): Promise<GeoResult[]> {
+export async function geocodePlace(query: string): Promise<GeoResult[]> {
   const q = query.trim();
   if (!q) return [];
 
-  // Full UK postcode lookup
+  // UK postcode niceties (still useful when input matches)
   if (POSTCODE_RE.test(q)) {
     const r = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(q.replace(/\s+/g, ""))}`);
     if (r.ok) {
@@ -29,13 +31,13 @@ export async function geocodeUK(query: string): Promise<GeoResult[]> {
         name: `${d.parish || d.admin_ward || d.admin_district}`,
         region: d.region || d.admin_county || d.country,
         postcode: d.postcode,
+        country: "United Kingdom",
+        countryCode: "GB",
         latitude: d.latitude,
         longitude: d.longitude,
       }];
     }
   }
-
-  // Partial postcode → outcode
   if (PARTIAL_POSTCODE_RE.test(q)) {
     const r = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(q)}`);
     if (r.ok) {
@@ -45,32 +47,38 @@ export async function geocodeUK(query: string): Promise<GeoResult[]> {
         name: d.outcode + " — " + (d.admin_district?.[0] ?? "UK"),
         region: d.admin_county?.[0] || d.country?.[0],
         postcode: d.outcode,
+        country: "United Kingdom",
+        countryCode: "GB",
         latitude: d.latitude,
         longitude: d.longitude,
       }];
     }
   }
 
-  // Place name search via Open-Meteo geocoding (filter to GB)
+  // Worldwide place-name search via Open-Meteo geocoding
   const r = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json&country=GB`
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`
   );
   if (!r.ok) return [];
   const j = await r.json();
   const results: GeoResult[] = (j.results || [])
-    .filter((d: { country_code?: string }) => d.country_code === "GB")
-    .slice(0, 8)
-    .map((d: { name: string; admin1?: string; admin2?: string; latitude: number; longitude: number }) => ({
+    .slice(0, 10)
+    .map((d: { name: string; admin1?: string; admin2?: string; country?: string; country_code?: string; latitude: number; longitude: number }) => ({
       name: d.name,
       region: d.admin2 || d.admin1,
+      country: d.country,
+      countryCode: d.country_code,
       latitude: d.latitude,
       longitude: d.longitude,
     }));
   return results;
 }
 
+// Backwards-compat alias
+export const geocodeUK = geocodePlace;
+
 export async function reverseGeocode(lat: number, lon: number): Promise<GeoResult | null> {
-  // postcodes.io reverse — UK only
+  // Try postcodes.io first (UK only, gives nice locality names)
   const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lon}&lat=${lat}&limit=1&radius=2000`);
   if (r.ok) {
     const j = await r.json();
@@ -80,11 +88,28 @@ export async function reverseGeocode(lat: number, lon: number): Promise<GeoResul
         name: d.parish || d.admin_ward || d.admin_district,
         region: d.region || d.country,
         postcode: d.postcode,
+        country: "United Kingdom",
+        countryCode: "GB",
         latitude: lat,
         longitude: lon,
       };
     }
   }
+  // Worldwide fallback via BigDataCloud (free, no key)
+  try {
+    const r2 = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+    if (r2.ok) {
+      const j = await r2.json();
+      return {
+        name: j.city || j.locality || j.principalSubdivision || "Current location",
+        region: j.principalSubdivision,
+        country: j.countryName,
+        countryCode: j.countryCode,
+        latitude: lat,
+        longitude: lon,
+      };
+    }
+  } catch { /* ignore */ }
   return { name: "Current location", latitude: lat, longitude: lon };
 }
 
@@ -103,11 +128,12 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   ].join(","));
   url.searchParams.set("daily", [
     "temperature_2m_max", "temperature_2m_min", "precipitation_probability_max",
-    "precipitation_sum", "uv_index_max", "weather_code"
+    "precipitation_sum", "uv_index_max", "weather_code",
+    "wind_speed_10m_max", "sunrise", "sunset"
   ].join(","));
-  url.searchParams.set("timezone", "Europe/London");
+  url.searchParams.set("timezone", "auto");
   url.searchParams.set("wind_speed_unit", "mph");
-  url.searchParams.set("forecast_days", "2");
+  url.searchParams.set("forecast_days", "7");
 
   const r = await fetch(url.toString());
   if (!r.ok) throw new Error("Weather fetch failed");
@@ -137,6 +163,22 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
 
   const info = describeWeather(c.weather_code, !!c.is_day);
 
+  const days: WeatherDay[] = [];
+  for (let i = 0; i < d.time.length; i++) {
+    days.push({
+      date: d.time[i],
+      high: d.temperature_2m_max[i],
+      low: d.temperature_2m_min[i],
+      precipProb: d.precipitation_probability_max[i] ?? 0,
+      precipSum: d.precipitation_sum[i] ?? 0,
+      weatherCode: d.weather_code[i],
+      uvIndexMax: d.uv_index_max[i] ?? 0,
+      windMax: d.wind_speed_10m_max?.[i] ?? 0,
+      sunrise: d.sunrise?.[i],
+      sunset: d.sunset?.[i],
+    });
+  }
+
   return {
     temp: c.temperature_2m,
     feelsLike: c.apparent_temperature,
@@ -152,6 +194,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     conditions: info.label,
     isDay: !!c.is_day,
     hourly: next,
+    daily: days,
+    timezone: j.timezone || "auto",
     alerts: deriveAlerts(c, d, hourly),
   };
 }
