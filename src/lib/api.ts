@@ -1,4 +1,4 @@
-import type { Location, WeatherData, PollenData, AqiData, WeatherHour, PollenBreakdown } from "./types";
+import type { Location, WeatherData, PollenData, AqiData, WeatherHour, WeatherDay, PollenBreakdown } from "./types";
 import { pollenSeverity, aqiSeverity } from "./severity";
 import { describeWeather } from "./weatherCodes";
 
