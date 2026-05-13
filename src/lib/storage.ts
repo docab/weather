@@ -10,7 +10,7 @@ export function loadLocations(): Location[] {
   catch { return []; }
 }
 export function saveLocations(locs: Location[]) {
-  localStorage.setItem(LOCATIONS_KEY, JSON.stringify(locs.slice(0, 5)));
+  localStorage.setItem(LOCATIONS_KEY, JSON.stringify(locs.slice(0, 7)));
 }
 
 export function loadPrimaryId(): string | null {
