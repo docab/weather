@@ -5,10 +5,10 @@ import { severityLabel } from "./severity";
 function tempFeel(actual: number, feels: number): string {
   const diff = actual - feels;
   if (Math.abs(diff) < 1.5) return "";
-  if (diff > 4) return ` The cold will catch you off guard — it's ${Math.round(actual)}°C but feels like ${Math.round(feels)}°C.`;
-  if (diff > 1.5) return ` It feels a touch colder than it looks — like ${Math.round(feels)}°C.`;
-  if (diff < -3) return ` Warmer than it looks — that ${Math.round(actual)}°C feels closer to ${Math.round(feels)}°C in the sun.`;
-  return ` Feels around ${Math.round(feels)}°C.`;
+  if (diff > 4) return ` Heads up — it's ${Math.round(actual)}° but it'll bite like ${Math.round(feels)}° once you're out.`;
+  if (diff > 1.5) return ` Bit nippier than it looks, more like ${Math.round(feels)}° on the skin.`;
+  if (diff < -3) return ` Warmer than the number — that ${Math.round(actual)}° will feel closer to ${Math.round(feels)}° in the sun.`;
+  return ` Feels about ${Math.round(feels)}° really.`;
 }
 
 function timeOfDayShift(weather: WeatherData): string {
@@ -21,9 +21,9 @@ function timeOfDayShift(weather: WeatherData): string {
   const startRain = next8.slice(0, 3).some(h => h.precipProb >= 50);
   const lateRain = next8.slice(-3).some(h => h.precipProb >= 50);
 
-  if (!startRain && lateRain) return ` Dry now, but rain rolls in later — pack a brolly.`;
-  if (startRain && !lateRain) return ` Wet start, drying out as the day goes on.`;
-  if (startInfo.sky !== lateInfo.sky) return ` Starts ${startInfo.short.toLowerCase()}, turning ${lateInfo.short.toLowerCase()} later.`;
+  if (!startRain && lateRain) return ` Dry for now, but the rain creeps in later — chuck a brolly in your bag.`;
+  if (startRain && !lateRain) return ` Wet start, then it eases off through the day.`;
+  if (startInfo.sky !== lateInfo.sky) return ` Starts off ${startInfo.short.toLowerCase()}, turning ${lateInfo.short.toLowerCase()} by the evening.`;
   return "";
 }
 
@@ -37,33 +37,33 @@ export function buildNarrative(
 
   // Opening line on conditions
   if (info.sky === "clear") {
-    parts.push(`Crisp and clear — bright skies overhead.`);
+    parts.push(`Lovely and clear out — proper bright sky.`);
   } else if (info.sky === "cloudy" && weather.precipProb < 30) {
-    parts.push(`Grey and overcast, but staying dry.`);
+    parts.push(`Grey lid of cloud, but it should stay dry.`);
   } else if (info.sky === "rain") {
-    parts.push(`It'll feel raw and damp today — like standing in a cold mist.`);
+    parts.push(`A bit grim out — damp, drizzly sort of day.`);
   } else if (info.sky === "snow") {
-    parts.push(`Wintry and biting — snow on the cards.`);
+    parts.push(`Wintry one — snow's on the cards, wrap up.`);
+  } else if (info.sky === "night") {
+    parts.push(`Quiet, clear night out there.`);
   } else {
-    parts.push(`A muted, in-between sort of day.`);
+    parts.push(`Bit of an in-between day, honestly.`);
   }
 
   parts[0] += tempFeel(weather.temp, weather.feelsLike);
   const shift = timeOfDayShift(weather);
   if (shift) parts.push(shift.trim());
 
-  if (weather.windGust >= 50) parts.push(`Gusts pushing ${Math.round(weather.windGust)} mph — hold onto your hat.`);
-  else if (weather.windSpeed >= 25) parts.push(`Blustery — ${Math.round(weather.windSpeed)} mph wind.`);
+  if (weather.windGust >= 50) parts.push(`Gusts up around ${Math.round(weather.windGust)} mph — hold onto your hat.`);
+  else if (weather.windSpeed >= 25) parts.push(`Properly blustery, wind's pushing ${Math.round(weather.windSpeed)} mph.`);
 
   if (pollen.level === "high" || pollen.level === "very-high") {
-    parts.push(`${severityLabel[pollen.level]} pollen — ${pollen.dominantSpecies} dominant. Antihistamines worth a thought.`);
+    parts.push(`Pollen's ${severityLabel[pollen.level].toLowerCase()} too — mostly ${pollen.dominantSpecies.toLowerCase()}. Worth taking an antihistamine.`);
   }
-
   if (aqi.level === "high" || aqi.level === "very-high") {
-    parts.push(`Air quality is ${severityLabel[aqi.level].toLowerCase()} — sensitive lungs, take it easy.`);
+    parts.push(`Air's a bit rough today, so go easy if your lungs are sensitive.`);
   }
-
-  if (weather.uvIndex >= 6) parts.push(`UV is high (${Math.round(weather.uvIndex)}) — sun cream on.`);
+  if (weather.uvIndex >= 6) parts.push(`UV's strong (${Math.round(weather.uvIndex)}) — get the sun cream on.`);
 
   return parts.join(" ");
 }
