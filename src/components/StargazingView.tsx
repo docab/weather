@@ -4,6 +4,7 @@ import { getMoonPhase, getMoonPosition, getSunPosition, compass } from "@/lib/as
 import { fetchAurora, kpDescription } from "@/lib/aurora";
 import { activeShowers } from "@/lib/meteor";
 import { Stars, Moon, Sparkles, Cloud, Telescope, Loader2 } from "lucide-react";
+import { AuroraFX, MeteorFX, AnimatedMoon } from "./fx/WeatherFX";
 
 export function StargazingView({ conditions }: { conditions: LocationConditions }) {
   const { weather, location } = conditions;
@@ -21,6 +22,8 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
   const showers = activeShowers(now);
   const cloud = weather.cloudCover;
   const conditionsLine = darkSkyChat(cloud, phase.illumination, sunNow.altitude);
+  const auroraActive = (aurora.data?.kpNow ?? 0) >= 4;
+  const meteorActive = showers.some(s => s.isPeakingNow);
 
   return (
     <div className="space-y-4 animate-fade-in-up">
@@ -49,7 +52,7 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
           The moon
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-5xl">{phase.emoji}</div>
+          <AnimatedMoon size={64} illumination={phase.illumination} phase={phase.phase} />
           <div>
             <div className="text-base font-semibold">{phase.name}</div>
             <div className="text-xs text-muted-foreground">
@@ -65,11 +68,14 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
       </div>
 
       {/* Aurora */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+        <AuroraFX active={auroraActive} />
+        <div className="absolute inset-0 bg-background/55" />
+        <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           Aurora forecast
         </div>
+        <div className="relative">
         {aurora.isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Fetching solar activity…
@@ -92,14 +98,18 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
             </div>
           );
         })()}
+        </div>
       </div>
 
       {/* Meteor showers */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+        <MeteorFX active={meteorActive} />
+        <div className="absolute inset-0 bg-background/55" />
+        <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           <Stars className="h-3.5 w-3.5 text-primary" />
           Meteor showers
         </div>
+        <div className="relative">
         {showers.length === 0 && (
           <p className="text-sm text-muted-foreground">No active meteor showers right now — quiet sky tonight.</p>
         )}
@@ -119,6 +129,7 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
             </li>
           ))}
         </ul>
+        </div>
       </div>
     </div>
   );
