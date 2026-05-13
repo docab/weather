@@ -16,6 +16,8 @@ import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations } from "@/li
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle } from "lucide-react";
+import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
+import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 7;
 const MAX_SAVED = 6; // + 1 auto-detected
@@ -77,6 +79,9 @@ const Index = () => {
   const noLocation = !geo.location && !savedLocations.length;
   const refreshing = queries.some(q => q.isFetching);
 
+  const activeWeather = activeQuery?.data?.weather;
+  const meteorActive = activeShowers(new Date()).some(s => s.isPeakingNow);
+
   return (
     <div className="min-h-screen pb-16">
       <AppHeader onRefresh={refresh} refreshing={refreshing} />
@@ -125,6 +130,7 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="briefing" className="mt-4">
+              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.5} />}>
               <BriefingView
                 locations={allLocations}
                 queries={queries}
@@ -135,9 +141,11 @@ const Index = () => {
                   todayTab?.click();
                 }}
               />
+              </TabBg>
             </TabsContent>
 
             <TabsContent value="today" className="mt-4">
+              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.5} />}>
               <div className="mb-4">
                 <LocationTabs
                   locations={allLocations}
@@ -155,9 +163,11 @@ const Index = () => {
                 </div>
               )}
               {activeQuery?.data && <LocationView conditions={activeQuery.data} />}
+              </TabBg>
             </TabsContent>
 
             <TabsContent value="forecast" className="mt-4">
+              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.4} />}>
               <div className="mb-4">
                 <LocationTabs
                   locations={allLocations}
@@ -169,9 +179,11 @@ const Index = () => {
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.data && <ForecastView conditions={activeQuery.data} />}
+              </TabBg>
             </TabsContent>
 
             <TabsContent value="stars" className="mt-4">
+              <TabBg fx={<><AuroraFX /><MeteorFX active={meteorActive} /></>}>
               <div className="mb-4">
                 <LocationTabs
                   locations={allLocations}
@@ -183,10 +195,13 @@ const Index = () => {
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.data && <StargazingView conditions={activeQuery.data} />}
+              </TabBg>
             </TabsContent>
 
             <TabsContent value="travel" className="mt-4">
+              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.4} />}>
               <TravelView locations={allLocations} queries={queries} />
+              </TabBg>
             </TabsContent>
           </Tabs>
         )}
@@ -202,3 +217,17 @@ const Index = () => {
 };
 
 export default Index;
+
+/** Wraps a tab in an animated, weather-driven backdrop with a translucent
+ * black overlay so the underlying content stays legible. */
+function TabBg({ fx, children }: { fx: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="relative -mx-4 overflow-hidden rounded-3xl px-4 py-4">
+      <div className="pointer-events-none absolute inset-0">
+        {fx}
+        <div className="absolute inset-0 bg-background/70" />
+      </div>
+      <div className="relative">{children}</div>
+    </div>
+  );
+}

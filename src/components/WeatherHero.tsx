@@ -1,16 +1,21 @@
 import type { LocationConditions } from "@/lib/types";
 import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp } from "lucide-react";
+import { WeatherFX, AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
+import { getMoonPhase } from "@/lib/astronomy";
 
 export function WeatherHero({ conditions }: { conditions: LocationConditions }) {
   const { weather } = conditions;
   const info = describeWeather(weather.weatherCode, weather.isDay);
   const SkyIcon = info.Icon;
+  const isClear = info.sky === "clear";
+  const phase = getMoonPhase(new Date());
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-border p-6 shadow-card"
       style={dynamicSkyStyle(info.sky, weather.feelsLike)}
     >
+      <WeatherFX weather={weather} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/30" />
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
@@ -26,7 +31,13 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
               </div>
             </div>
           </div>
-          <SkyIcon className="h-20 w-20 text-foreground/85 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]" strokeWidth={1.4} />
+          <div className="flex h-20 w-20 items-center justify-center text-foreground/85">
+            {isClear && weather.isDay
+              ? <AnimatedSun size={80} warm={weather.feelsLike >= 22} />
+              : isClear && !weather.isDay
+                ? <AnimatedMoon size={72} illumination={phase.illumination} phase={phase.phase} />
+                : <SkyIcon className="h-20 w-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]" strokeWidth={1.4} />}
+          </div>
         </div>
 
         <div className="mt-5 flex items-center gap-3 text-sm">

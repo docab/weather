@@ -1,18 +1,27 @@
 import type { LocationConditions } from "@/lib/types";
-import { Sparkles, Shirt, Umbrella, FlaskConical } from "lucide-react";
+import { Sparkles, Shirt, FlaskConical } from "lucide-react";
+import { PerfumeFX, AnimatedUmbrella } from "./fx/WeatherFX";
+import { buildPerfumeNotes } from "@/lib/narrative";
 
 export function NarrativeCard({ conditions }: { conditions: LocationConditions }) {
+  const needUmbrella = conditions.weather.precipProb >= 40;
+  const notes = buildPerfumeNotes(conditions.weather, conditions.pollen);
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-      <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+      <PerfumeFX notes={notes} />
+      <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
         How it'll feel
       </div>
-      <p className="text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
+      <p className="relative text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="relative mt-5 grid gap-3 sm:grid-cols-2">
         <Recommendation icon={<Shirt className="h-4 w-4" />} label="Wear" text={conditions.outfit} />
-        <Recommendation icon={<Umbrella className="h-4 w-4" />} label="Umbrella" text={conditions.umbrella} />
+        <Recommendation
+          icon={<AnimatedUmbrella open={needUmbrella} size={22} />}
+          label="Umbrella"
+          text={conditions.umbrella}
+        />
         <Recommendation icon={<FlaskConical className="h-4 w-4" />} label="Fragrance" text={conditions.perfume} />
       </div>
     </div>
