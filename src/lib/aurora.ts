@@ -35,8 +35,6 @@ export async function fetchAurora(): Promise<AuroraForecast> {
   const kpNow = parseFloat(last[1]);
   const kpNext = parseFloat(prev[1]); // SWPC gives recent 3h, use prior as a stand-in trend
   const updated = last[0];
-  const minLatNow = visibilityLat(kpNow);
-
   return {
     kpNow,
     kpNext,
