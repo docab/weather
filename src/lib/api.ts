@@ -121,10 +121,11 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set("longitude", String(lon));
   url.searchParams.set("current", [
     "temperature_2m", "apparent_temperature", "is_day", "precipitation",
-    "rain", "weather_code", "wind_speed_10m", "wind_gusts_10m", "relative_humidity_2m"
+    "rain", "weather_code", "wind_speed_10m", "wind_gusts_10m", "relative_humidity_2m",
+    "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility"
   ].join(","));
   url.searchParams.set("hourly", [
-    "temperature_2m", "apparent_temperature", "precipitation_probability", "weather_code"
+    "temperature_2m", "apparent_temperature", "precipitation_probability", "weather_code", "cloud_cover"
   ].join(","));
   url.searchParams.set("daily", [
     "temperature_2m_max", "temperature_2m_min", "precipitation_probability_max",
@@ -158,6 +159,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
       feelsLike: hourly.apparent_temperature[i],
       precipProb: hourly.precipitation_probability[i] ?? 0,
       weatherCode: hourly.weather_code[i],
+      cloudCover: hourly.cloud_cover?.[i] ?? 0,
     });
   }
 
@@ -193,10 +195,17 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     weatherCode: c.weather_code,
     conditions: info.label,
     isDay: !!c.is_day,
+    cloudCover: c.cloud_cover ?? 0,
+    cloudLow: c.cloud_cover_low ?? 0,
+    cloudMid: c.cloud_cover_mid ?? 0,
+    cloudHigh: c.cloud_cover_high ?? 0,
+    visibility: c.visibility,
     hourly: next,
     daily: days,
     timezone: j.timezone || "auto",
     alerts: deriveAlerts(c, d, hourly),
+    latitude: lat,
+    longitude: lon,
   };
 }
 
