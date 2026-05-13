@@ -5,12 +5,14 @@ import { HourlyStrip } from "./HourlyStrip";
 import { PollenCard } from "./PollenCard";
 import { AqiCard } from "./AqiCard";
 import { AlertsList } from "./AlertsList";
+import { SkyNowCard } from "./SkyNowCard";
 
 export function LocationView({ conditions }: { conditions: LocationConditions }) {
   return (
     <div className="space-y-4 animate-fade-in-up">
       <WeatherHero conditions={conditions} />
       <NarrativeCard conditions={conditions} />
+      <SkyNowCard conditions={conditions} />
       {conditions.weather.alerts.length > 0 && (
         <AlertsList alerts={conditions.weather.alerts} />
       )}

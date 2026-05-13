@@ -7,6 +7,8 @@ import { LocationView, LocationViewSkeleton } from "@/components/LocationView";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
 import { BriefingView } from "@/components/BriefingView";
 import { ForecastView } from "@/components/ForecastView";
+import { StargazingView } from "@/components/StargazingView";
+import { TravelView } from "@/components/TravelView";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useConditionsForLocations } from "@/hooks/useConditions";
@@ -15,8 +17,8 @@ import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle } from "lucide-react";
 
-const MAX_LOCATIONS = 5;
-const MAX_SAVED = 4; // + 1 auto-detected
+const MAX_LOCATIONS = 7;
+const MAX_SAVED = 6; // + 1 auto-detected
 
 const Index = () => {
   const geo = useGeolocation();
@@ -114,10 +116,12 @@ const Index = () => {
 
         {allLocations.length > 0 && (
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-card">
-              <TabsTrigger value="briefing">Briefing</TabsTrigger>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="forecast">7-day</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5 bg-card text-xs">
+              <TabsTrigger value="briefing" className="px-1">Now</TabsTrigger>
+              <TabsTrigger value="today" className="px-1">Today</TabsTrigger>
+              <TabsTrigger value="forecast" className="px-1">7-day</TabsTrigger>
+              <TabsTrigger value="stars" className="px-1">Stars</TabsTrigger>
+              <TabsTrigger value="travel" className="px-1">Travel</TabsTrigger>
             </TabsList>
 
             <TabsContent value="briefing" className="mt-4">
@@ -165,6 +169,24 @@ const Index = () => {
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.data && <ForecastView conditions={activeQuery.data} />}
+            </TabsContent>
+
+            <TabsContent value="stars" className="mt-4">
+              <div className="mb-4">
+                <LocationTabs
+                  locations={allLocations}
+                  activeId={activeId}
+                  onSelect={handleSelect}
+                  onAdd={() => setAddOpen(true)}
+                  canAdd={savedLocations.length < MAX_SAVED}
+                />
+              </div>
+              {activeQuery?.isLoading && <LocationViewSkeleton />}
+              {activeQuery?.data && <StargazingView conditions={activeQuery.data} />}
+            </TabsContent>
+
+            <TabsContent value="travel" className="mt-4">
+              <TravelView locations={allLocations} queries={queries} />
             </TabsContent>
           </Tabs>
         )}
