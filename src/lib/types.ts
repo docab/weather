@@ -44,6 +44,7 @@ export interface WeatherHour {
   feelsLike: number;
   precipProb: number;
   weatherCode: number;
+  cloudCover?: number;
 }
 
 export interface WeatherDay {
@@ -80,10 +81,17 @@ export interface WeatherData {
   weatherCode: number;
   conditions: string;
   isDay: boolean;
+  cloudCover: number;
+  cloudLow: number;
+  cloudMid: number;
+  cloudHigh: number;
+  visibility?: number;
   hourly: WeatherHour[];
   daily: WeatherDay[];
   alerts: WeatherAlert[];
   timezone: string;
+  latitude: number;
+  longitude: number;
 }
 
 export interface LocationConditions {
