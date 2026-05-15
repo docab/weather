@@ -13,7 +13,7 @@ export function HourlyStrip({ weather }: { weather: WeatherData }) {
             const date = new Date(h.time);
             const hr = date.toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false }).replace(":00", "");
             return (
-              <div key={i} className="flex min-w-[52px] flex-col items-center gap-1 rounded-xl bg-secondary/40 px-2 py-2.5">
+              <div key={i} className="flex min-w-[52px] flex-col items-center gap-1 rounded-xl glass-tile px-2 py-2.5">
                 <div className="text-[10px] text-muted-foreground tabular">{i === 0 ? "Now" : `${hr}:00`}</div>
                 <div className="text-lg leading-none">{info.icon}</div>
                 <div className="text-sm font-semibold tabular">{Math.round(h.feelsLike)}°</div>

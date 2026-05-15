@@ -32,7 +32,7 @@ export function NarrativeCard({ conditions }: { conditions: LocationConditions }
 
 function Recommendation({ icon, label, text }: { icon: React.ReactNode; label: string; text: string }) {
   return (
-    <div className="flex gap-3 rounded-xl bg-secondary/40 p-3">
+    <div className="flex gap-3 rounded-xl glass-tile p-3">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
         {icon}
       </div>
