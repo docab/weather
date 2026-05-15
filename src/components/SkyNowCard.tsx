@@ -18,7 +18,7 @@ export function SkyNowCard({ conditions }: { conditions: LocationConditions }) {
   const lookUp = describeSky(weather.cloudCover, sun, moon, phase, weather.isDay);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+    <div className="relative overflow-hidden glass-card p-5 shadow-card">
       <WeatherFX weather={weather} intensity={0.6} />
       <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         <Eye className="h-3.5 w-3.5 text-primary" />

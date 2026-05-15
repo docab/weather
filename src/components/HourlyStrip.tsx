@@ -4,7 +4,7 @@ import { CloudRain } from "lucide-react";
 
 export function HourlyStrip({ weather }: { weather: WeatherData }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+    <div className="glass-card p-4 shadow-card">
       <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Next 12 hours</div>
       <div className="-mx-4 overflow-x-auto px-4 pb-1">
         <div className="flex gap-2">

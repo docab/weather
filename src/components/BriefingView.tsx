@@ -51,7 +51,7 @@ function BriefingRow({
 }) {
   if (loading) {
     return (
-      <div className="flex h-28 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
+      <div className="flex h-28 items-center justify-center glass-card text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
       </div>
     );

@@ -19,7 +19,7 @@ export function TravelView({ locations, queries }: Props) {
 
   if (!ready && data.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
+      <div className="flex h-40 items-center justify-center glass-card text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
       </div>
     );
@@ -27,7 +27,7 @@ export function TravelView({ locations, queries }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground shadow-card">
+      <div className="glass-card p-5 text-sm text-muted-foreground shadow-card">
         Add at least two places to compare them for travel.
       </div>
     );
@@ -57,7 +57,7 @@ export function TravelView({ locations, queries }: Props) {
         reason={whyBad(avoid.d)}
       />
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="glass-card p-5 shadow-card">
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           <Calendar className="h-3.5 w-3.5 text-primary" />
           Best days, by place
@@ -77,7 +77,7 @@ export function TravelView({ locations, queries }: Props) {
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="glass-card p-5 shadow-card">
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           <Plane className="h-3.5 w-3.5 text-primary" />
           Packing notes

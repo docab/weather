@@ -18,7 +18,7 @@ const SPECIES: { key: keyof PollenData["breakdown"]; label: string }[] = [
 export function PollenCard({ pollen }: { pollen: PollenData }) {
   const max = Math.max(1, ...Object.values(pollen.breakdown));
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+    <div className="relative overflow-hidden glass-card p-5 shadow-card">
       <PollenFX severity={severityRank[pollen.level]} />
       <div className="relative mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
