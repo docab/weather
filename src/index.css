@@ -188,6 +188,25 @@
     0%   { transform: rotate(0deg) translateX(38%) rotate(0deg); }
     100% { transform: rotate(360deg) translateX(38%) rotate(-360deg); }
   }
+  @keyframes fx-spray-press {
+    0%, 70%, 100% { transform: translateY(0); }
+    8%, 14%       { transform: translateY(1.2px); }
+  }
+  @keyframes fx-spray-puff {
+    0%, 70%, 100% { opacity: 0; transform: translate3d(0,0,0) scale(.6); }
+    8%            { opacity: .9; transform: translate3d(0,0,0) scale(.8); }
+    35%           { opacity: .35; transform: translate3d(7px,-2px,0) scale(1.4); }
+    60%           { opacity: 0;  transform: translate3d(12px,-3px,0) scale(1.7); }
+  }
+  @keyframes fx-note-float {
+    0%   { transform: translate3d(0,10px,0) scale(.6); opacity: 0; }
+    15%  { opacity: .85; }
+    100% { transform: translate3d(var(--fx-x,0),-110%,0) scale(1.05) rotate(var(--fx-r,0deg)); opacity: 0; }
+  }
+  @keyframes fx-note-bob {
+    0%,100% { transform: translateY(0) rotate(-4deg); }
+    50%     { transform: translateY(-3px) rotate(4deg); }
+  }
   .fx-layer {
     position: absolute; inset: 0; pointer-events: none; overflow: hidden;
   }

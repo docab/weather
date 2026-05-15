@@ -72,6 +72,19 @@ const Index = () => {
     savePrimaryId(id);
   };
 
+  const handleRemove = (id: string) => {
+    const next = savedLocations.filter(l => l.id !== id);
+    setSavedLocations(next);
+    saveLocations(next);
+    if (activeId === id) {
+      const fallback = allLocations.find(l => l.id !== id);
+      if (fallback) {
+        setActiveId(fallback.id);
+        savePrimaryId(fallback.id);
+      }
+    }
+  };
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["conditions"] });
   };
@@ -153,6 +166,7 @@ const Index = () => {
                   onSelect={handleSelect}
                   onAdd={() => setAddOpen(true)}
                   canAdd={savedLocations.length < MAX_SAVED}
+                  onRemove={handleRemove}
                 />
               </div>
 
@@ -175,6 +189,7 @@ const Index = () => {
                   onSelect={handleSelect}
                   onAdd={() => setAddOpen(true)}
                   canAdd={savedLocations.length < MAX_SAVED}
+                  onRemove={handleRemove}
                 />
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
@@ -191,6 +206,7 @@ const Index = () => {
                   onSelect={handleSelect}
                   onAdd={() => setAddOpen(true)}
                   canAdd={savedLocations.length < MAX_SAVED}
+                  onRemove={handleRemove}
                 />
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}

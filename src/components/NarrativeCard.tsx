@@ -1,7 +1,9 @@
 import type { LocationConditions } from "@/lib/types";
-import { Sparkles, Shirt, FlaskConical } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { PerfumeFX, AnimatedUmbrella } from "./fx/WeatherFX";
 import { buildPerfumeNotes } from "@/lib/narrative";
+import { ClothingIcon } from "./icons/ClothingIcon";
+import { PerfumeBottle } from "./icons/PerfumeBottle";
 
 export function NarrativeCard({ conditions }: { conditions: LocationConditions }) {
   const needUmbrella = conditions.weather.precipProb >= 40;
@@ -16,13 +18,13 @@ export function NarrativeCard({ conditions }: { conditions: LocationConditions }
       <p className="relative text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
 
       <div className="relative mt-5 grid gap-3 sm:grid-cols-2">
-        <Recommendation icon={<Shirt className="h-4 w-4" />} label="Wear" text={conditions.outfit} />
+        <Recommendation icon={<ClothingIcon weather={conditions.weather} size={20} />} label="Wear" text={conditions.outfit} />
         <Recommendation
           icon={<AnimatedUmbrella open={needUmbrella} size={22} />}
           label="Umbrella"
           text={conditions.umbrella}
         />
-        <Recommendation icon={<FlaskConical className="h-4 w-4" />} label="Fragrance" text={conditions.perfume} />
+        <Recommendation icon={<PerfumeBottle size={22} />} label="Fragrance" text={conditions.perfume} />
       </div>
     </div>
   );

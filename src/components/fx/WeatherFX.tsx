@@ -328,28 +328,169 @@ export function AqiFX({ severity = 0 }: { severity?: number }) {
 }
 
 /* -----------------------------------------------------------------------
- * Perfume notes — floating words/icons in the background
+ * Perfume notes — floating little SVG icons matched to fragrance notes.
+ * No text — just glyphs (leaf, droplet, citrus slice, wood ring, flower…).
  * ---------------------------------------------------------------------*/
+type NoteGlyph = "citrus" | "leaf" | "wood" | "flower" | "drop" | "spice" | "amber" | "smoke";
+
+const NOTE_MAP: Record<string, { glyph: NoteGlyph; color: string }> = {
+  // citrus
+  bergamot: { glyph: "citrus", color: "48 90% 65%" },
+  lemon:    { glyph: "citrus", color: "55 95% 65%" },
+  orange:   { glyph: "citrus", color: "28 95% 60%" },
+  neroli:   { glyph: "flower", color: "48 80% 80%" },
+  // greens / herbal
+  "green tea":   { glyph: "leaf", color: "120 50% 60%" },
+  sage:          { glyph: "leaf", color: "150 35% 55%" },
+  rosemary:      { glyph: "leaf", color: "140 40% 55%" },
+  lavender:      { glyph: "flower", color: "260 50% 70%" },
+  mint:          { glyph: "leaf", color: "160 60% 60%" },
+  "violet leaf": { glyph: "leaf", color: "270 35% 60%" },
+  moss:          { glyph: "leaf", color: "100 35% 45%" },
+  petrichor:     { glyph: "drop", color: "200 50% 65%" },
+  rain:          { glyph: "drop", color: "210 70% 70%" },
+  // florals / soft
+  iris:    { glyph: "flower", color: "280 35% 75%" },
+  fig:     { glyph: "leaf", color: "90 35% 55%" },
+  cotton:  { glyph: "flower", color: "0 0% 95%" },
+  musk:    { glyph: "amber", color: "30 40% 70%" },
+  "white tea": { glyph: "leaf", color: "60 25% 80%" },
+  // aquatic
+  salt:       { glyph: "drop", color: "190 30% 80%" },
+  cucumber:   { glyph: "drop", color: "100 50% 70%" },
+  "sea breeze": { glyph: "drop", color: "200 60% 75%" },
+  "sea salt":   { glyph: "drop", color: "190 30% 80%" },
+  ozone:        { glyph: "drop", color: "210 50% 80%" },
+  // woods
+  cedar:       { glyph: "wood", color: "20 45% 45%" },
+  sandalwood:  { glyph: "wood", color: "30 50% 55%" },
+  vetiver:     { glyph: "wood", color: "60 30% 45%" },
+  // smoke / amber / oud
+  incense: { glyph: "smoke", color: "0 0% 70%" },
+  smoke:   { glyph: "smoke", color: "0 0% 60%" },
+  leather: { glyph: "amber", color: "25 60% 35%" },
+  oud:     { glyph: "amber", color: "20 60% 30%" },
+  amber:   { glyph: "amber", color: "35 80% 55%" },
+  vanilla: { glyph: "amber", color: "40 60% 75%" },
+  saffron: { glyph: "spice", color: "20 90% 55%" },
+  tonka:   { glyph: "amber", color: "30 55% 50%" },
+  benzoin: { glyph: "amber", color: "30 60% 60%" },
+  animalic:{ glyph: "smoke", color: "20 30% 35%" },
+  "soft amber": { glyph: "amber", color: "35 70% 65%" },
+};
+
+function noteFor(name: string): { glyph: NoteGlyph; color: string } {
+  return NOTE_MAP[name.toLowerCase()] ?? { glyph: "drop", color: "30 50% 70%" };
+}
+
+function NoteGlyph({ glyph, color, size }: { glyph: NoteGlyph; color: string; size: number }) {
+  const c = `hsl(${color})`;
+  switch (glyph) {
+    case "citrus":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          <circle cx="12" cy="12" r="9" fill={c} opacity=".25" />
+          <circle cx="12" cy="12" r="6.5" fill={c} opacity=".45" />
+          <g stroke={c} strokeWidth="0.8" opacity=".7">
+            {Array.from({length:8}).map((_,i)=>{
+              const a=(i*Math.PI)/4;
+              return <line key={i} x1="12" y1="12" x2={12+Math.cos(a)*6} y2={12+Math.sin(a)*6}/>;
+            })}
+          </g>
+        </svg>
+      );
+    case "leaf":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          <path d="M4 20 Q4 6 20 4 Q22 16 8 20 Z" fill={c} opacity=".55" />
+          <path d="M6 18 Q12 12 18 6" stroke={c} strokeWidth="0.9" fill="none" />
+        </svg>
+      );
+    case "wood":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          <circle cx="12" cy="12" r="9" fill={c} opacity=".35" />
+          <circle cx="12" cy="12" r="6" fill="none" stroke={c} strokeWidth="0.9" opacity=".7" />
+          <circle cx="12" cy="12" r="3" fill="none" stroke={c} strokeWidth="0.9" opacity=".8" />
+          <circle cx="12" cy="12" r="1" fill={c} />
+        </svg>
+      );
+    case "flower":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          {Array.from({length:6}).map((_,i)=>{
+            const a=(i*Math.PI)/3;
+            return <ellipse key={i} cx={12+Math.cos(a)*4} cy={12+Math.sin(a)*4}
+                            rx="3.5" ry="2" fill={c} opacity=".55"
+                            transform={`rotate(${(i*60)} ${12+Math.cos(a)*4} ${12+Math.sin(a)*4})`} />;
+          })}
+          <circle cx="12" cy="12" r="2" fill={c} />
+        </svg>
+      );
+    case "drop":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          <path d="M12 3 Q19 13 12 21 Q5 13 12 3 Z" fill={c} opacity=".7" />
+          <ellipse cx="10" cy="10" rx="1.5" ry="2.5" fill="white" opacity=".4" />
+        </svg>
+      );
+    case "spice":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          {Array.from({length:5}).map((_,i)=>{
+            const a=(i*Math.PI*2)/5;
+            return <ellipse key={i} cx={12+Math.cos(a)*4} cy={12+Math.sin(a)*4} rx="1.4" ry="3.2"
+                            fill={c} opacity=".7"
+                            transform={`rotate(${i*72} ${12+Math.cos(a)*4} ${12+Math.sin(a)*4})`} />;
+          })}
+        </svg>
+      );
+    case "amber":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          <ellipse cx="12" cy="13" rx="7" ry="8" fill={c} opacity=".75" />
+          <ellipse cx="9" cy="9" rx="2" ry="2.5" fill="white" opacity=".35" />
+        </svg>
+      );
+    case "smoke":
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size}>
+          <path d="M6 18 Q3 14 6 12 Q3 8 8 7 Q10 3 14 5 Q19 4 18 9 Q22 11 19 14 Q21 18 16 18 Q14 21 10 19 Q7 21 6 18 Z"
+                fill={c} opacity=".55" />
+        </svg>
+      );
+  }
+}
+
 export function PerfumeFX({ notes }: { notes: string[] }) {
   if (!notes.length) return null;
+  // duplicate notes a few times for density
+  const items = notes.flatMap((n, idx) => [n, n].map((nn, k) => ({ name: nn, key: idx * 10 + k })));
   return (
     <div className="fx-layer">
-      {notes.map((n, i) => {
-        const left = rand(5, 85, i + 131);
-        const dur = rand(14, 24, i + 137);
-        const delay = rand(0, 10, i + 141);
-        const x = rand(-20, 20, i + 143);
+      {items.map(({ name, key }, i) => {
+        const left = rand(5, 88, key + 131);
+        const dur = rand(12, 22, key + 137);
+        const delay = rand(0, 12, key + 141);
+        const x = rand(-25, 25, key + 143);
+        const r = rand(-25, 25, key + 147);
+        const size = rand(14, 22, key + 149);
+        const { glyph, color } = noteFor(name);
         return (
-          <span key={`${n}-${i}`} style={{
-            position: "absolute", bottom: "-10%", left: `${left}%`,
-            fontSize: 11,
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            color: "hsl(30 60% 80% / .55)",
-            whiteSpace: "nowrap",
+          <span key={i} style={{
+            position: "absolute", bottom: "-8%", left: `${left}%`,
             "--fx-x": `${x}px`,
-            animation: `fx-float-up ${dur}s ease-in ${delay}s infinite`,
-          } as CSSProperties}>{n}</span>
+            "--fx-r": `${r}deg`,
+            animation: `fx-note-float ${dur}s ease-in ${delay}s infinite`,
+            filter: "drop-shadow(0 2px 4px hsl(0 0% 0% / .35))",
+          } as CSSProperties}>
+            <span style={{
+              display: "inline-block",
+              animation: `fx-note-bob ${rand(3, 6, key + 151)}s ease-in-out infinite`,
+            } as CSSProperties}>
+              <NoteGlyph glyph={glyph} color={color} size={size} />
+            </span>
+          </span>
         );
       })}
     </div>
