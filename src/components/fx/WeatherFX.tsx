@@ -23,28 +23,46 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const info = describeWeather(code, isDay);
 
   const isThunder = code >= 95;
+  const isHail    = code === 96 || code === 99;
   const isSnow    = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain    = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
   const isFog     = code === 45 || code === 48;
   const isWindy   = weather.windSpeed >= 18;
   const cloud     = weather.cloudCover;
+  const visKm     = weather.visibility ? weather.visibility / 1000 : 99;
+  const isMist    = !isFog && !isRain && !isSnow && weather.humidity >= 92;
+  const isFrost   = !isRain && !isSnow && weather.feelsLike <= 0;
+  const isDust    = !isRain && !isSnow && !isFog && weather.humidity < 35 && (visKm < 5 || weather.windSpeed >= 25);
+  const isPartly  = !isRain && !isSnow && !isFog && cloud >= 25 && cloud < 70;
 
   return (
     <div className="fx-layer">
       {/* night stars */}
       {!isDay && cloud < 70 && <Stars count={26} />}
-      {/* clouds — always show some when cloudy */}
-      {(cloud > 25 || isFog || isRain || isSnow) && <Clouds density={cloud} />}
+      {/* clear-sky atmospheric haze for empty days/nights */}
+      {cloud < 25 && !isFog && !isRain && !isSnow && <ClearAir warm={weather.feelsLike >= 22} day={isDay} />}
+      {/* clouds — always show some when cloudy. Multi-layered for depth. */}
+      {(cloud > 18 || isFog || isRain || isSnow) && <Clouds density={cloud} day={isDay} />}
       {/* sun rays for clear day */}
       {isDay && info.sky === "clear" && <SunRays />}
+      {/* sun peeking through gaps for partly-cloudy day */}
+      {isDay && isPartly && <SunRays warm={weather.feelsLike >= 22} />}
       {/* fog */}
       {isFog && <Fog />}
+      {/* mist — humid but not full fog */}
+      {isMist && <Mist />}
       {/* rain */}
       {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder} intensity={intensity} />}
+      {/* hail */}
+      {isHail && <Hail />}
       {/* snow */}
       {isSnow && <Snow heavy={code === 75 || code === 86} />}
+      {/* dust / sand storm */}
+      {isDust && <SandStorm intensity={intensity} />}
       {/* wind streaks */}
-      {isWindy && !isRain && !isSnow && <Wind />}
+      {isWindy && !isRain && !isSnow && !isDust && <Wind />}
+      {/* freezing-cold frost crystals overlay */}
+      {isFrost && <Frost />}
       {/* lightning */}
       {isThunder && <Lightning />}
     </div>
