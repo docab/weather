@@ -23,28 +23,46 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const info = describeWeather(code, isDay);
 
   const isThunder = code >= 95;
+  const isHail    = code === 96 || code === 99;
   const isSnow    = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain    = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
   const isFog     = code === 45 || code === 48;
   const isWindy   = weather.windSpeed >= 18;
   const cloud     = weather.cloudCover;
+  const visKm     = weather.visibility ? weather.visibility / 1000 : 99;
+  const isMist    = !isFog && !isRain && !isSnow && weather.humidity >= 92;
+  const isFrost   = !isRain && !isSnow && weather.feelsLike <= 0;
+  const isDust    = !isRain && !isSnow && !isFog && weather.humidity < 35 && (visKm < 5 || weather.windSpeed >= 25);
+  const isPartly  = !isRain && !isSnow && !isFog && cloud >= 25 && cloud < 70;
 
   return (
     <div className="fx-layer">
       {/* night stars */}
       {!isDay && cloud < 70 && <Stars count={26} />}
-      {/* clouds — always show some when cloudy */}
-      {(cloud > 25 || isFog || isRain || isSnow) && <Clouds density={cloud} />}
+      {/* clear-sky atmospheric haze for empty days/nights */}
+      {cloud < 25 && !isFog && !isRain && !isSnow && <ClearAir warm={weather.feelsLike >= 22} day={isDay} />}
+      {/* clouds — always show some when cloudy. Multi-layered for depth. */}
+      {(cloud > 18 || isFog || isRain || isSnow) && <Clouds density={cloud} day={isDay} />}
       {/* sun rays for clear day */}
       {isDay && info.sky === "clear" && <SunRays />}
+      {/* sun peeking through gaps for partly-cloudy day */}
+      {isDay && isPartly && <SunRays warm={weather.feelsLike >= 22} />}
       {/* fog */}
       {isFog && <Fog />}
+      {/* mist — humid but not full fog */}
+      {isMist && <Mist />}
       {/* rain */}
       {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder} intensity={intensity} />}
+      {/* hail */}
+      {isHail && <Hail />}
       {/* snow */}
       {isSnow && <Snow heavy={code === 75 || code === 86} />}
+      {/* dust / sand storm */}
+      {isDust && <SandStorm intensity={intensity} />}
       {/* wind streaks */}
-      {isWindy && !isRain && !isSnow && <Wind />}
+      {isWindy && !isRain && !isSnow && !isDust && <Wind />}
+      {/* freezing-cold frost crystals overlay */}
+      {isFrost && <Frost />}
       {/* lightning */}
       {isThunder && <Lightning />}
     </div>
@@ -101,32 +119,210 @@ export function Snow({ heavy }: { heavy?: boolean }) {
   );
 }
 
-export function Clouds({ density = 60 }: { density?: number }) {
-  const count = density > 80 ? 5 : density > 50 ? 4 : 3;
+/* Soft, multi-layer cumulus clouds with parallax depth. Smaller blurry
+ * clouds drift slowly in the background, larger sharper clouds drift
+ * faster in front, creating a much more natural sky than a single row. */
+export function Clouds({ density = 60, day = true }: { density?: number; day?: boolean }) {
+  const layers = [
+    { count: 3, top: [4, 22],  scale: 0.55, dur: [180, 240], blur: 6,   opacityMul: 0.65, z: 0 },
+    { count: 3, top: [12, 42], scale: 0.85, dur: [110, 170], blur: 3,   opacityMul: 0.85, z: 1 },
+    { count: density > 70 ? 3 : 2, top: [22, 60], scale: 1.15, dur: [70, 120], blur: 1.5, opacityMul: 1, z: 2 },
+  ];
+  // colour shifts with day/night and density (overcast = slightly darker)
+  const lightness = density > 80 ? (day ? 78 : 38) : (day ? 88 : 50);
+  const fill = `hsl(210 18% ${lightness}%)`;
+  const baseOpacity = Math.min(0.78, 0.22 + density / 220);
+  let key = 0;
   return (
     <div className="fx-layer" aria-hidden>
-      {arr(count).map((_, i) => {
-        const top = rand(2, 60, i + 5);
-        const dur = rand(60, 140, i + 9);
-        const delay = -rand(0, dur, i + 13);
-        const scale = rand(0.7, 1.3, i + 17);
-        const opacity = Math.min(0.55, 0.18 + density / 300);
+      {layers.flatMap((L, li) =>
+        arr(L.count).map(() => {
+          key++;
+          const top = rand(L.top[0], L.top[1], key + 5);
+          const dur = rand(L.dur[0], L.dur[1], key + 9);
+          const delay = -rand(0, dur, key + 13);
+          const scale = L.scale * rand(0.85, 1.15, key + 17);
+          const opacity = baseOpacity * L.opacityMul * rand(0.85, 1, key + 19);
+          const w = 200 * scale;
+          return (
+            <div key={`c-${li}-${key}`} style={{
+              position: "absolute", top: `${top}%`, left: 0,
+              width: `${w}px`, height: `${w * 0.45}px`,
+              opacity,
+              animation: `fx-drift ${dur}s linear ${delay}s infinite`,
+              filter: `blur(${L.blur}px)`,
+            } as CSSProperties}>
+              <CloudPuff fill={fill} seed={key} />
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+/* A single soft cumulus drawn from layered ellipses for a fluffy edge. */
+function CloudPuff({ fill, seed }: { fill: string; seed: number }) {
+  // slight pseudo-random variation per cloud
+  const a = rand(0.9, 1.1, seed + 1);
+  const b = rand(0.9, 1.1, seed + 2);
+  return (
+    <svg viewBox="0 0 200 90" preserveAspectRatio="none" width="100%" height="100%"
+         style={{ animation: `fx-cloud-puff ${10 + (seed % 7)}s ease-in-out infinite` } as CSSProperties}>
+      <g fill={fill}>
+        <ellipse cx={50}  cy={62 * a} rx={36}     ry={22} opacity=".75"/>
+        <ellipse cx={88}  cy={48 * b} rx={42}     ry={28} opacity=".90"/>
+        <ellipse cx={132} cy={56}     rx={40 * a} ry={26} opacity=".85"/>
+        <ellipse cx={162} cy={66}     rx={28}     ry={20} opacity=".70"/>
+        <ellipse cx={108} cy={70}     rx={56}     ry={18} opacity=".55"/>
+      </g>
+    </svg>
+  );
+}
+
+/* Empty-sky atmospheric gradient — a hint of warmth at the horizon and
+ * a couple of slow-moving wisps so a "clear" sky doesn't look static. */
+export function ClearAir({ warm, day }: { warm?: boolean; day?: boolean }) {
+  const top = day ? (warm ? "hsl(28 80% 18% / 0)" : "hsl(210 70% 14% / 0)") : "hsl(232 50% 8% / 0)";
+  const bot = day ? (warm ? "hsl(20 90% 30% / .55)" : "hsl(200 70% 28% / .55)") : "hsl(240 60% 14% / .55)";
+  return (
+    <div className="fx-layer">
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(180deg, ${top} 0%, ${bot} 100%)`,
+        animation: "fx-haze 14s ease-in-out infinite",
+      } as CSSProperties}/>
+      {arr(2).map((_, i) => (
+        <div key={i} style={{
+          position: "absolute", top: `${20 + i * 25}%`, left: 0,
+          width: "60%", height: "12%",
+          background: "radial-gradient(ellipse at center, hsl(0 0% 100% / .08), transparent 70%)",
+          filter: "blur(10px)",
+          animation: `fx-drift ${220 + i * 60}s linear ${-i * 80}s infinite`,
+        } as CSSProperties}/>
+      ))}
+    </div>
+  );
+}
+
+/* Mist — humid, hazy, low contrast veil that breathes in and out. */
+export function Mist() {
+  return (
+    <div className="fx-layer">
+      {arr(4).map((_, i) => (
+        <div key={i} style={{
+          position: "absolute",
+          top: `${10 + i * 22}%`, left: "-20%", right: "-20%", height: "28%",
+          background: "linear-gradient(90deg, transparent, hsl(200 25% 80% / .35), transparent)",
+          filter: "blur(14px)",
+          animation: `fx-mist ${22 + i * 4}s ease-in-out ${-i * 5}s infinite`,
+        } as CSSProperties}/>
+      ))}
+    </div>
+  );
+}
+
+/* Frost — pale crystalline shimmer at the edges (sub-zero conditions). */
+export function Frost() {
+  return (
+    <div className="fx-layer">
+      <div style={{
+        position: "absolute", inset: 0,
+        background:
+          "radial-gradient(120% 60% at 50% 0%, hsl(200 60% 95% / .18), transparent 55%),\
+           radial-gradient(120% 60% at 50% 100%, hsl(200 60% 95% / .18), transparent 55%)",
+        animation: "fx-frost 8s ease-in-out infinite",
+      } as CSSProperties}/>
+      {/* corner frost crystals */}
+      {[
+        { t: "0%",   l: "0%",   r: 0   },
+        { t: "0%",   l: "auto", r: 0, right: "0%" },
+        { t: "auto", b: "0%",   l: "0%" },
+        { t: "auto", b: "0%",   l: "auto", right: "0%" },
+      ].map((p: any, i) => (
+        <svg key={i} viewBox="0 0 100 100" width="120" height="120" style={{
+          position: "absolute", top: p.t, bottom: p.b, left: p.l, right: p.right,
+          opacity: 0.35, animation: `fx-frost ${6 + i}s ease-in-out ${-i}s infinite`,
+        } as CSSProperties}>
+          <g stroke="hsl(200 60% 95%)" strokeWidth="0.6" fill="none" opacity=".7">
+            {arr(6).map((_, k) => {
+              const a = (k * Math.PI) / 3;
+              const x = 50 + Math.cos(a) * 35;
+              const y = 50 + Math.sin(a) * 35;
+              return <line key={k} x1="50" y1="50" x2={x} y2={y}/>;
+            })}
+          </g>
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/* Hail — small bouncing white pellets falling fast. */
+export function Hail() {
+  const n = 35;
+  return (
+    <div className="fx-layer">
+      {arr(n).map((_, i) => {
+        const left = rand(0, 100, i + 211);
+        const dur = rand(0.6, 1.1, i + 217);
+        const delay = rand(0, 1.5, i + 223);
+        const size = rand(3, 6, i + 227);
         return (
-          <svg key={i} viewBox="0 0 200 80" style={{
-            position: "absolute", top: `${top}%`, left: 0,
-            width: `${120 * scale}px`,
-            opacity,
-            animation: `fx-drift ${dur}s linear ${delay}s infinite`,
-            filter: "blur(2px)",
-          } as CSSProperties}>
-            <path d="M30 60 Q10 60 15 45 Q5 30 25 28 Q30 10 55 18 Q70 5 90 18 Q120 8 130 28 Q160 25 160 45 Q175 60 150 62 Z"
-                  fill="hsl(210 20% 85%)" />
-          </svg>
+          <span key={i} style={{
+            position: "absolute", top: 0, left: `${left}%`,
+            width: size, height: size, borderRadius: "50%",
+            background: "radial-gradient(circle, hsl(210 30% 96%), hsl(210 20% 70%))",
+            boxShadow: "0 0 4px hsl(210 50% 95% / .8)",
+            animation: `fx-hail ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
         );
       })}
     </div>
   );
 }
+
+/* Sand / dust storm — orange-brown horizontal gusts. */
+export function SandStorm({ intensity = 1 }: { intensity?: number }) {
+  const gusts = Math.round(8 * intensity);
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(28 70% 35% / .25), hsl(20 60% 25% / .55))",
+    } as CSSProperties}>
+      {arr(gusts).map((_, i) => {
+        const top = rand(0, 90, i + 301);
+        const dur = rand(2.4, 5, i + 307);
+        const delay = rand(0, 4, i + 311);
+        const h = rand(40, 120, i + 313);
+        return (
+          <div key={i} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: "60%", height: `${h}px`,
+            background: "radial-gradient(ellipse at center, hsl(28 80% 55% / .55), transparent 70%)",
+            filter: "blur(10px)",
+            animation: `fx-dust ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+      {/* fast streaks */}
+      {arr(20).map((_, i) => {
+        const top = rand(5, 95, i + 331);
+        const dur = rand(1.2, 2.4, i + 337);
+        const delay = rand(0, 2.5, i + 341);
+        const len = rand(80, 220, i + 343);
+        return (
+          <span key={`s${i}`} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: `${len}px`, height: 1,
+            background: "linear-gradient(to right, transparent, hsl(28 80% 70% / .65), transparent)",
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+    </div>
+  );
+}
+
 
 export function Fog() {
   return (

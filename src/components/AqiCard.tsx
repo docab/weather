@@ -12,7 +12,7 @@ export function AqiCard({ aqi }: { aqi: AqiData }) {
     { label: "O₃", value: aqi.o3, unit: "µg/m³", scale: 180 },
   ];
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+    <div className="glass-card p-5 shadow-card">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           <Wind className="h-4 w-4" /> Air Quality

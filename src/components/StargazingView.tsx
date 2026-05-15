@@ -32,7 +32,7 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
       </div>
 
       {/* Tonight's outlook */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="glass-card p-5 shadow-card">
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           <Telescope className="h-3.5 w-3.5 text-primary" />
           Tonight's outlook
@@ -46,7 +46,7 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
       </div>
 
       {/* Moon details */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="glass-card p-5 shadow-card">
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           <Moon className="h-3.5 w-3.5 text-primary" />
           The moon
@@ -68,7 +68,7 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
       </div>
 
       {/* Aurora */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="relative overflow-hidden glass-card p-5 shadow-card">
         <AuroraFX active={auroraActive} />
         <div className="absolute inset-0 bg-background/55" />
         <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -102,7 +102,7 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
       </div>
 
       {/* Meteor showers */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="relative overflow-hidden glass-card p-5 shadow-card">
         <MeteorFX active={meteorActive} />
         <div className="absolute inset-0 bg-background/55" />
         <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">

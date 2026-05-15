@@ -18,7 +18,7 @@ export function SkyNowCard({ conditions }: { conditions: LocationConditions }) {
   const lookUp = describeSky(weather.cloudCover, sun, moon, phase, weather.isDay);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+    <div className="relative overflow-hidden glass-card p-5 shadow-card">
       <WeatherFX weather={weather} intensity={0.6} />
       <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         <Eye className="h-3.5 w-3.5 text-primary" />
@@ -28,7 +28,7 @@ export function SkyNowCard({ conditions }: { conditions: LocationConditions }) {
       <p className="relative text-base leading-relaxed text-foreground/95">{lookUp}</p>
 
       {/* Cloud overlay visual */}
-      <div className="relative mt-4 overflow-hidden rounded-xl bg-secondary/40 p-3">
+      <div className="relative mt-4 overflow-hidden rounded-xl glass-tile p-3">
         <div className="mb-2 flex items-center justify-between text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1"><Cloud className="h-3 w-3" /> Cloud cover</span>
           <span className="tabular">{Math.round(weather.cloudCover)}%</span>
@@ -76,7 +76,7 @@ function CloudLayer({ label, value, hint }: { label: string; value: number; hint
 
 function Body({ icon, name, state }: { icon: React.ReactNode; name: string; state: string }) {
   return (
-    <div className="flex gap-3 rounded-xl bg-secondary/40 p-3">
+    <div className="flex gap-3 rounded-xl glass-tile p-3">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background/50 text-primary">
         {icon}
       </div>

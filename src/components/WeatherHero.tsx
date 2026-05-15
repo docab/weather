@@ -12,11 +12,12 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const phase = getMoonPhase(new Date());
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-border p-6 shadow-card"
+      className="glass-card relative overflow-hidden p-6"
       style={dynamicSkyStyle(info.sky, weather.feelsLike)}
     >
       <WeatherFX weather={weather} />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/30" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/40" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
       <div className="relative">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -61,7 +62,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-background/30 p-3 backdrop-blur">
+    <div className="glass-tile p-3">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         <span className="text-[10px] font-semibold uppercase tracking-wider">{label}</span>

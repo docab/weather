@@ -13,7 +13,7 @@ export function AlertsList({ alerts }: { alerts: WeatherAlert[] }) {
   return (
     <div className="space-y-2">
       {alerts.map(a => (
-        <div key={a.id} className="rounded-2xl border border-border bg-card p-4 shadow-card">
+        <div key={a.id} className="glass-card p-4 shadow-card">
           <div className="flex items-start gap-3">
             <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset", SEVERITY_STYLES[a.severity])}>
               <AlertTriangle className="h-4 w-4" />

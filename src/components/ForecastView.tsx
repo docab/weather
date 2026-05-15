@@ -16,7 +16,7 @@ export function ForecastView({ conditions }: Props) {
       <div className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Next 7 days · {conditions.location.name}
       </div>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div className="overflow-hidden glass-card shadow-card">
         {days.map((d, i) => {
           const info = describeWeather(d.weatherCode, true);
           const Icon = info.Icon;

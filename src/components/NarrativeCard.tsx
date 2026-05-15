@@ -9,7 +9,7 @@ export function NarrativeCard({ conditions }: { conditions: LocationConditions }
   const needUmbrella = conditions.weather.precipProb >= 40;
   const notes = buildPerfumeNotes(conditions.weather, conditions.pollen);
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-card">
+    <div className="relative overflow-hidden glass-card p-5 shadow-card">
       <PerfumeFX notes={notes} />
       <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -32,7 +32,7 @@ export function NarrativeCard({ conditions }: { conditions: LocationConditions }
 
 function Recommendation({ icon, label, text }: { icon: React.ReactNode; label: string; text: string }) {
   return (
-    <div className="flex gap-3 rounded-xl bg-secondary/40 p-3">
+    <div className="flex gap-3 rounded-xl glass-tile p-3">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
         {icon}
       </div>
