@@ -17,6 +17,7 @@ import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
+import { dynamicSkyStyle, describeWeather } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 7;
@@ -27,6 +28,7 @@ const Index = () => {
   const [savedLocations, setSavedLocations] = useState<Location[]>(() => loadLocations());
   const [activeId, setActiveId] = useState<string>("");
   const [addOpen, setAddOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("today");
   const queryClient = useQueryClient();
 
   const allLocations: Location[] = useMemo(() => {
@@ -94,9 +96,23 @@ const Index = () => {
 
   const activeWeather = activeQuery?.data?.weather;
   const meteorActive = activeShowers(new Date()).some(s => s.isPeakingNow);
+  const skyInfo = activeWeather ? describeWeather(activeWeather.weatherCode, activeWeather.isDay) : null;
+  const pageBgStyle = activeWeather && skyInfo
+    ? dynamicSkyStyle(skyInfo.sky, activeWeather.feelsLike)
+    : { background: "hsl(var(--background))" };
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="relative min-h-screen pb-16">
+      {/* Fixed, page-wide animated sky backdrop driven by the active location.
+          The Stars tab swaps in aurora + meteor showers. */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={pageBgStyle as React.CSSProperties}>
+        {activeTab === "stars"
+          ? <><AuroraFX active={meteorActive} /><MeteorFX active={meteorActive} /></>
+          : activeWeather && <WeatherFX weather={activeWeather} intensity={1} />}
+        {/* Soft veil for legibility — lighter than before so the sky shows through. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/55 to-background/80" />
+      </div>
+
       <AppHeader onRefresh={refresh} refreshing={refreshing} />
 
       <main className="mx-auto max-w-2xl px-4 pt-4">
@@ -133,8 +149,8 @@ const Index = () => {
         )}
 
         {allLocations.length > 0 && (
-          <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-card text-xs">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 glass-card text-xs">
               <TabsTrigger value="briefing" className="px-1">Now</TabsTrigger>
               <TabsTrigger value="today" className="px-1">Today</TabsTrigger>
               <TabsTrigger value="forecast" className="px-1">7-day</TabsTrigger>
@@ -143,22 +159,17 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="briefing" className="mt-4">
-              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.5} />}>
               <BriefingView
                 locations={allLocations}
                 queries={queries}
                 onOpenLocation={(id) => {
                   handleSelect(id);
-                  // Switch back to Today tab via DOM (Tabs is uncontrolled here)
-                  const todayTab = document.querySelector<HTMLButtonElement>('[role="tab"][value="today"]');
-                  todayTab?.click();
+                  setActiveTab("today");
                 }}
               />
-              </TabBg>
             </TabsContent>
 
             <TabsContent value="today" className="mt-4">
-              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.5} />}>
               <div className="mb-4">
                 <LocationTabs
                   locations={allLocations}
@@ -172,16 +183,14 @@ const Index = () => {
 
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.isError && (
-                <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-5 text-sm text-destructive">
+                <div className="glass-card border-destructive/40 bg-destructive/10 p-5 text-sm text-destructive">
                   Couldn't load conditions. Try again in a moment.
                 </div>
               )}
               {activeQuery?.data && <LocationView conditions={activeQuery.data} />}
-              </TabBg>
             </TabsContent>
 
             <TabsContent value="forecast" className="mt-4">
-              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.4} />}>
               <div className="mb-4">
                 <LocationTabs
                   locations={allLocations}
@@ -194,11 +203,9 @@ const Index = () => {
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.data && <ForecastView conditions={activeQuery.data} />}
-              </TabBg>
             </TabsContent>
 
             <TabsContent value="stars" className="mt-4">
-              <TabBg fx={<><AuroraFX /><MeteorFX active={meteorActive} /></>}>
               <div className="mb-4">
                 <LocationTabs
                   locations={allLocations}
@@ -211,13 +218,10 @@ const Index = () => {
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.data && <StargazingView conditions={activeQuery.data} />}
-              </TabBg>
             </TabsContent>
 
             <TabsContent value="travel" className="mt-4">
-              <TabBg fx={activeWeather && <WeatherFX weather={activeWeather} intensity={0.4} />}>
               <TravelView locations={allLocations} queries={queries} />
-              </TabBg>
             </TabsContent>
           </Tabs>
         )}
@@ -233,17 +237,3 @@ const Index = () => {
 };
 
 export default Index;
-
-/** Wraps a tab in an animated, weather-driven backdrop with a translucent
- * black overlay so the underlying content stays legible. */
-function TabBg({ fx, children }: { fx: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="relative -mx-4 overflow-hidden rounded-3xl px-4 py-4">
-      <div className="pointer-events-none absolute inset-0">
-        {fx}
-        <div className="absolute inset-0 bg-background/70" />
-      </div>
-      <div className="relative">{children}</div>
-    </div>
-  );
-}
