@@ -23,12 +23,11 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
             <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {info.label}
             </div>
-            <div className="mt-1 flex items-baseline gap-3 tabular">
-              <span className="text-7xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
-              <div className="flex flex-col text-xs text-muted-foreground">
-                <span>feels like</span>
-                <span className="text-sm font-semibold text-foreground/90">actual {Math.round(weather.temp)}°</span>
-              </div>
+            <div className="mt-1 tabular">
+              <span className="block text-7xl font-bold leading-none">{Math.round(weather.temp)}°</span>
+              <span className="mt-2 block text-xs text-muted-foreground">
+                Feels like <span className="font-semibold text-foreground/90">{Math.round(weather.feelsLike)}°</span>
+              </span>
             </div>
           </div>
           <div className="flex h-20 w-20 items-center justify-center text-foreground/85">
