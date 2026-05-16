@@ -13,6 +13,13 @@ export function saveLocations(locs: Location[]) {
   localStorage.setItem(LOCATIONS_KEY, JSON.stringify(locs.slice(0, 7)));
 }
 
+export function renameLocation(id: string, customName: string | undefined): Location[] {
+  const list = loadLocations();
+  const next = list.map(l => l.id === id ? { ...l, customName: customName?.trim() || undefined } : l);
+  saveLocations(next);
+  return next;
+}
+
 export function loadPrimaryId(): string | null {
   return localStorage.getItem(PRIMARY_KEY);
 }
