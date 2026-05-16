@@ -830,30 +830,76 @@ export function AnimatedSun({ size = 64, warm }: { size?: number; warm?: boolean
   );
 }
 
+/**
+ * Realistic animated moon. Renders a textured disc (maria + craters),
+ * then applies a phase-accurate shadow mask. Subtle breathing halo.
+ */
 export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { size?: number; illumination?: number; phase?: number }) {
-  // phase 0..1: 0 new, .25 first qtr, .5 full, .75 last qtr
   const r = size / 2;
-  const offset = (1 - illumination) * size * (phase < 0.5 ? -1 : 1);
+  const uid = `m-${size}-${Math.round(phase * 100)}`;
+  // Phase shadow geometry — a circular cutter offset along the terminator.
+  // phase: 0 new, 0.25 first qtr (waxing), 0.5 full, 0.75 last qtr (waning).
+  const waxing = phase < 0.5;
+  const k = Math.cos(phase * Math.PI * 2); // +1 at new, -1 at full
+  const shadowOffset = k * r;  // shifts cutter across the disc
+  const shadowSide = waxing ? -1 : 1;
   return (
     <div style={{ position: "relative", width: size, height: size } as CSSProperties}>
+      {/* halo */}
       <div style={{
-        position: "absolute", inset: -8, borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(220 80% 90% / .25), transparent 70%)",
-        animation: "fx-sun-pulse 5s ease-in-out infinite",
-      } as CSSProperties} />
+        position: "absolute", inset: -size * 0.22, borderRadius: "50%",
+        background: "radial-gradient(circle, hsl(45 60% 92% / .35), hsl(220 60% 80% / .12) 55%, transparent 75%)",
+        animation: "fx-sun-pulse 6s ease-in-out infinite",
+        filter: "blur(2px)",
+      } as CSSProperties}/>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ position:"absolute", inset:0 }}>
         <defs>
-          <radialGradient id="moonGrad" cx="40%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="hsl(48 30% 96%)" />
-            <stop offset="100%" stopColor="hsl(220 25% 70%)" />
+          <radialGradient id={`${uid}-surface`} cx="38%" cy="32%" r="75%">
+            <stop offset="0%" stopColor="hsl(45 35% 96%)" />
+            <stop offset="60%" stopColor="hsl(40 20% 82%)" />
+            <stop offset="100%" stopColor="hsl(30 18% 65%)" />
           </radialGradient>
-          <mask id={`moonMask-${size}`}>
-            <rect width={size} height={size} fill="white" />
-            <ellipse cx={r + offset} cy={r} rx={r * 0.96} ry={r * 0.96} fill="black" />
+          <radialGradient id={`${uid}-rim`} cx="50%" cy="50%" r="50%">
+            <stop offset="85%" stopColor="hsl(220 20% 8% / 0)" />
+            <stop offset="100%" stopColor="hsl(220 25% 4% / .55)" />
+          </radialGradient>
+          <clipPath id={`${uid}-disc`}>
+            <circle cx={r} cy={r} r={r * 0.96} />
+          </clipPath>
+          <mask id={`${uid}-mask`}>
+            <rect width={size} height={size} fill="white"/>
+            {/* dark cutter — bigger circle offset to carve out the unlit side */}
+            <ellipse
+              cx={r + shadowOffset * shadowSide}
+              cy={r}
+              rx={r * 1.02 * Math.max(0.05, Math.abs(k))}
+              ry={r * 0.96}
+              fill="black"
+            />
           </mask>
         </defs>
-        <circle cx={r} cy={r} r={r * 0.94} fill="hsl(220 30% 18%)" />
-        <circle cx={r} cy={r} r={r * 0.94} fill="url(#moonGrad)" mask={`url(#moonMask-${size})`} />
+        {/* dark disc backdrop (visible side that's in shadow) */}
+        <circle cx={r} cy={r} r={r * 0.96} fill="hsl(225 22% 9%)" />
+        {/* lit moon with surface texture, masked by phase */}
+        <g mask={`url(#${uid}-mask)`}>
+          <circle cx={r} cy={r} r={r * 0.96} fill={`url(#${uid}-surface)`} />
+          <g clipPath={`url(#${uid}-disc)`} opacity="0.55">
+            {/* maria (dark patches) */}
+            <ellipse cx={r * 0.78} cy={r * 0.82} rx={r * 0.28} ry={r * 0.22} fill="hsl(30 15% 45%)"/>
+            <ellipse cx={r * 1.15} cy={r * 0.92} rx={r * 0.22} ry={r * 0.18} fill="hsl(30 15% 50%)"/>
+            <ellipse cx={r * 1.05} cy={r * 1.25} rx={r * 0.18} ry={r * 0.14} fill="hsl(30 12% 48%)"/>
+            <ellipse cx={r * 0.62} cy={r * 1.18} rx={r * 0.12} ry={r * 0.10} fill="hsl(30 12% 50%)"/>
+            {/* craters */}
+            <circle cx={r * 1.30} cy={r * 0.55} r={r * 0.06} fill="hsl(30 10% 40%)"/>
+            <circle cx={r * 1.30} cy={r * 0.55} r={r * 0.045} fill="hsl(40 30% 88%)" opacity=".4"/>
+            <circle cx={r * 0.55} cy={r * 0.55} r={r * 0.05} fill="hsl(30 10% 40%)"/>
+            <circle cx={r * 1.45} cy={r * 1.20} r={r * 0.07} fill="hsl(30 10% 38%)"/>
+            <circle cx={r * 0.50} cy={r * 1.40} r={r * 0.04} fill="hsl(30 10% 42%)"/>
+            <circle cx={r * 1.00} cy={r * 0.40} r={r * 0.035} fill="hsl(30 10% 42%)"/>
+          </g>
+        </g>
+        {/* rim shading */}
+        <circle cx={r} cy={r} r={r * 0.96} fill={`url(#${uid}-rim)`} />
       </svg>
     </div>
   );
