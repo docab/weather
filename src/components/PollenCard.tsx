@@ -2,7 +2,7 @@ import type { PollenData } from "@/lib/types";
 import { SeverityBadge } from "./SeverityBadge";
 import { SeverityBar } from "./SeverityBar";
 import { pollenSeverity, severityLabel } from "@/lib/severity";
-import { Flower2 } from "lucide-react";
+import { Flower2, Shield } from "lucide-react";
 import { PollenFX } from "./fx/WeatherFX";
 import { severityRank } from "@/lib/severity";
 
@@ -49,6 +49,19 @@ export function PollenCard({ pollen }: { pollen: PollenData }) {
           );
         })}
       </div>
+      <div className="relative mt-4 flex items-start gap-2 rounded-xl glass-tile p-3">
+        <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+        <p className="text-xs text-foreground/85">{pollenAdvice(pollen.level, pollen.dominantSpecies)}</p>
+      </div>
     </div>
   );
+}
+
+function pollenAdvice(level: PollenData["level"], dominant: string): string {
+  switch (level) {
+    case "low":      return `Barely anything in the air — most hay-fever sufferers will be fine without antihistamines today.`;
+    case "moderate": return `Take your antihistamine in the morning if you're sensitive. Sunglasses help keep ${dominant.toLowerCase()} out of your eyes.`;
+    case "high":     return `Pre-load on antihistamines an hour before going out. Shower & change clothes when you get home — ${dominant.toLowerCase()} sticks to fabric and hair.`;
+    case "very-high":return `Stay indoors at peak hours (11am–3pm) if you can. Windows closed, antihistamines + eye drops, mask outside. ${dominant} is heavy.`;
+  }
 }
