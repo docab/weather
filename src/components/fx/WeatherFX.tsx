@@ -33,6 +33,9 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isMist    = !isFog && !isRain && !isSnow && weather.humidity >= 92;
   const isFrost   = !isRain && !isSnow && weather.feelsLike <= 0;
   const isDust    = !isRain && !isSnow && !isFog && weather.humidity < 35 && (visKm < 5 || weather.windSpeed >= 25);
+  const isTornado = (weather.windGust ?? 0) >= 95 || weather.windSpeed >= 70;
+  const isSmoke   = !isRain && !isFog && !isDust && visKm < 4 && weather.humidity < 60;
+  const isHaze    = !isRain && !isFog && !isDust && !isSmoke && visKm < 8 && weather.humidity >= 60 && weather.humidity < 90;
   const isPartly  = !isRain && !isSnow && !isFog && cloud >= 25 && cloud < 70;
 
   return (
@@ -51,6 +54,10 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {isFog && <Fog />}
       {/* mist — humid but not full fog */}
       {isMist && <Mist />}
+      {/* haze — moderate humidity, soft veil */}
+      {isHaze && <Haze />}
+      {/* smoke — wildfire / industrial smoke */}
+      {isSmoke && <Smoke intensity={intensity} />}
       {/* rain */}
       {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder} intensity={intensity} />}
       {/* hail */}
@@ -59,8 +66,10 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {isSnow && <Snow heavy={code === 75 || code === 86} />}
       {/* dust / sand storm */}
       {isDust && <SandStorm intensity={intensity} />}
+      {/* tornado / whirlwind */}
+      {isTornado && <Tornado />}
       {/* wind streaks */}
-      {isWindy && !isRain && !isSnow && !isDust && <Wind />}
+      {isWindy && !isRain && !isSnow && !isDust && !isTornado && <Wind />}
       {/* freezing-cold frost crystals overlay */}
       {isFrost && <Frost />}
       {/* lightning */}
