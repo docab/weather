@@ -12,7 +12,7 @@ import { TravelView } from "@/components/TravelView";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useConditionsForLocations } from "@/hooks/useConditions";
-import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations } from "@/lib/storage";
+import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations, renameLocation } from "@/lib/storage";
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle } from "lucide-react";
@@ -84,6 +84,21 @@ const Index = () => {
         setActiveId(fallback.id);
         savePrimaryId(fallback.id);
       }
+    }
+  };
+
+  const handleRename = (id: string, name: string | undefined) => {
+    // Auto-detected location isn't in saved list — store rename in savedLocations
+    // so it survives. For auto-detected we add a shadow entry just to remember.
+    const existing = savedLocations.find(l => l.id === id);
+    if (existing) {
+      const next = renameLocation(id, name);
+      setSavedLocations(next);
+    } else if (geo.location && geo.location.id === id) {
+      const shadow = { ...geo.location, customName: name };
+      const next = [...savedLocations.filter(l => l.id !== id), shadow];
+      setSavedLocations(next);
+      saveLocations(next);
     }
   };
 
@@ -178,6 +193,7 @@ const Index = () => {
                   onAdd={() => setAddOpen(true)}
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
+                  onRename={handleRename}
                 />
               </div>
 
@@ -199,6 +215,7 @@ const Index = () => {
                   onAdd={() => setAddOpen(true)}
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
+                  onRename={handleRename}
                 />
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
@@ -214,6 +231,7 @@ const Index = () => {
                   onAdd={() => setAddOpen(true)}
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
+                  onRename={handleRename}
                 />
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
