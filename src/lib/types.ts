@@ -3,6 +3,7 @@ export type Severity = "low" | "moderate" | "high" | "very-high";
 export interface Location {
   id: string;
   name: string;
+  customName?: string;
   region?: string;
   postcode?: string;
   country?: string;
