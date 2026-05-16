@@ -349,6 +349,103 @@ export function Fog() {
   );
 }
 
+/** Haze — moderate humidity, milky veil with subtle warm/yellow tinge. */
+export function Haze() {
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(40 25% 65% / .18), hsl(30 20% 55% / .28))",
+    } as CSSProperties}>
+      {arr(3).map((_, i) => (
+        <div key={i} style={{
+          position: "absolute", top: `${15 + i * 28}%`, left: 0, right: 0, height: "32%",
+          background: "radial-gradient(ellipse at center, hsl(40 30% 75% / .22), transparent 75%)",
+          filter: "blur(18px)",
+          animation: `fx-fog ${28 + i * 5}s ease-in-out ${-i * 6}s infinite alternate`,
+        } as CSSProperties}/>
+      ))}
+    </div>
+  );
+}
+
+/** Smoke — wildfire/industrial: brown-grey rising plumes with darkened sky. */
+export function Smoke({ intensity = 1 }: { intensity?: number }) {
+  const plumes = Math.round(10 * intensity);
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(20 30% 25% / .35), hsl(15 25% 18% / .55))",
+    } as CSSProperties}>
+      {arr(plumes).map((_, i) => {
+        const left = rand(0, 100, i + 401);
+        const dur = rand(14, 26, i + 407);
+        const delay = rand(0, 12, i + 411);
+        const size = rand(60, 140, i + 413);
+        const x = rand(-20, 20, i + 417);
+        return (
+          <div key={i} style={{
+            position: "absolute", bottom: "-10%", left: `${left}%`,
+            width: size, height: size, borderRadius: "50%",
+            background: "radial-gradient(circle, hsl(20 15% 35% / .7), transparent 70%)",
+            filter: "blur(8px)",
+            ["--fx-x" as any]: `${x}px`,
+            animation: `fx-smoke-rise ${dur}s ease-out ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Tornado — a swirling debris funnel sweeping across with darkened sky. */
+export function Tornado() {
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(210 25% 12% / .55), hsl(220 30% 8% / .75))",
+    } as CSSProperties}>
+      {/* Wind streaks */}
+      {arr(18).map((_, i) => {
+        const top = rand(0, 100, i + 501);
+        const dur = rand(0.8, 1.8, i + 507);
+        const delay = rand(0, 2, i + 511);
+        const len = rand(120, 280, i + 513);
+        return (
+          <span key={i} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: len, height: 1,
+            background: "linear-gradient(to right, transparent, hsl(0 0% 90% / .7), transparent)",
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+      {/* Funnel */}
+      <div style={{
+        position: "absolute", top: "0%", left: "30%",
+        width: 0, height: 0,
+        borderLeft: "60px solid transparent",
+        borderRight: "60px solid transparent",
+        borderTop: "120vh solid hsl(220 15% 15% / .65)",
+        filter: "blur(6px)",
+        animation: "fx-tornado 8s linear infinite",
+        transformOrigin: "center top",
+      } as CSSProperties}/>
+      {/* Debris specks */}
+      {arr(30).map((_, i) => {
+        const top = rand(10, 90, i + 601);
+        const dur = rand(0.6, 1.2, i + 607);
+        const delay = rand(0, 1, i + 611);
+        const size = rand(2, 4, i + 613);
+        return (
+          <span key={`d${i}`} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: size, height: size, borderRadius: "50%",
+            background: "hsl(30 30% 40%)",
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Wind() {
   return (
     <div className="fx-layer">
