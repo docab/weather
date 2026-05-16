@@ -2,7 +2,7 @@ import type { AqiData } from "@/lib/types";
 import { SeverityBadge } from "./SeverityBadge";
 import { SeverityBar } from "./SeverityBar";
 import { aqiLabel } from "@/lib/severity";
-import { Wind } from "lucide-react";
+import { Wind, Shield } from "lucide-react";
 
 export function AqiCard({ aqi }: { aqi: AqiData }) {
   const pollutants = [
@@ -42,6 +42,19 @@ export function AqiCard({ aqi }: { aqi: AqiData }) {
           </div>
         ))}
       </div>
+      <div className="mt-4 flex items-start gap-2 rounded-xl glass-tile p-3">
+        <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+        <p className="text-xs text-foreground/85">{aqiAdvice(aqi.level, aqi.dominantPollutant)}</p>
+      </div>
     </div>
   );
+}
+
+function aqiAdvice(level: AqiData["level"], dominant: string): string {
+  switch (level) {
+    case "low":      return `Air's clean — open the windows, go for a run, no worries.`;
+    case "moderate": return `Generally fine. If you have asthma or heart issues, keep an inhaler handy on long outdoor sessions.`;
+    case "high":     return `Cut down on hard exercise outside. Sensitive groups (kids, elderly, asthma) should mask up near busy roads — ${dominant} is the worst of it.`;
+    case "very-high":return `Stay indoors where possible. Windows closed, air purifier on. If you must go out, wear an FFP2/N95 mask — ${dominant} is well over safe limits.`;
+  }
 }

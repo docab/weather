@@ -1,5 +1,5 @@
 import type { Location } from "@/lib/types";
-import { Plus, MapPin, Locate, X } from "lucide-react";
+import { Plus, MapPin, Locate, X, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -9,15 +9,19 @@ interface Props {
   onAdd: () => void;
   canAdd: boolean;
   onRemove?: (id: string) => void;
+  onRename?: (id: string, name: string | undefined) => void;
 }
 
-export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onRemove }: Props) {
+export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onRemove, onRename }: Props) {
   return (
     <div className="-mx-4 overflow-x-auto px-4">
       <div className="flex gap-2">
         {locations.map(loc => {
           const active = loc.id === activeId;
           const removable = !loc.isAutoDetected && !!onRemove;
+          const renamable = !!onRename;
+          const display = loc.customName || loc.name;
+          const subtitle = loc.customName ? loc.name : loc.postcode;
           return (
             <div
               key={loc.id}
@@ -30,9 +34,24 @@ export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onR
             >
               <button onClick={() => onSelect(loc.id)} className="flex items-center gap-2 py-1">
                 {loc.isAutoDetected ? <Locate className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
-                <span>{loc.name}</span>
-                {loc.postcode && <span className="text-[10px] opacity-60">{loc.postcode}</span>}
+                <span className="flex flex-col items-start leading-tight">
+                  <span>{display}</span>
+                  {subtitle && <span className="text-[9px] font-normal opacity-60">{subtitle}</span>}
+                </span>
               </button>
+              {renamable && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = window.prompt(`Rename "${display}" to:`, loc.customName || "");
+                    if (next !== null) onRename!(loc.id, next.trim() || undefined);
+                  }}
+                  aria-label={`Rename ${display}`}
+                  className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/70 hover:bg-primary/20 hover:text-primary"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
               {removable ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemove!(loc.id); }}

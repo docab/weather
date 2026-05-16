@@ -1,7 +1,7 @@
 {
-  "name": "PollenWatch",
-  "short_name": "PollenWatch",
-  "description": "Hyper-local pollen, AQI & weather briefings worldwide",
+  "name": "Weatherer",
+  "short_name": "Weatherer",
+  "description": "Hyper-local weather, pollen, AQI & sky briefings worldwide",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0D1117",

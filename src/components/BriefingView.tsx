@@ -83,8 +83,10 @@ function BriefingRow({
               ? <Locate className="h-3 w-3" />
               : <MapPin className="h-3 w-3" />}
             <span className="truncate">
-              {location.name}
-              {location.country && <span className="opacity-60"> · {location.country}</span>}
+              {location.customName || location.name}
+              {location.customName
+                ? <span className="opacity-60"> · {location.name}</span>
+                : location.country && <span className="opacity-60"> · {location.country}</span>}
             </span>
           </div>
           <div className="mt-0.5 flex items-baseline gap-2 tabular">

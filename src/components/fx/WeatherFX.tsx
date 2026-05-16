@@ -33,6 +33,9 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isMist    = !isFog && !isRain && !isSnow && weather.humidity >= 92;
   const isFrost   = !isRain && !isSnow && weather.feelsLike <= 0;
   const isDust    = !isRain && !isSnow && !isFog && weather.humidity < 35 && (visKm < 5 || weather.windSpeed >= 25);
+  const isTornado = (weather.windGust ?? 0) >= 95 || weather.windSpeed >= 70;
+  const isSmoke   = !isRain && !isFog && !isDust && visKm < 4 && weather.humidity < 60;
+  const isHaze    = !isRain && !isFog && !isDust && !isSmoke && visKm < 8 && weather.humidity >= 60 && weather.humidity < 90;
   const isPartly  = !isRain && !isSnow && !isFog && cloud >= 25 && cloud < 70;
 
   return (
@@ -51,6 +54,10 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {isFog && <Fog />}
       {/* mist — humid but not full fog */}
       {isMist && <Mist />}
+      {/* haze — moderate humidity, soft veil */}
+      {isHaze && <Haze />}
+      {/* smoke — wildfire / industrial smoke */}
+      {isSmoke && <Smoke intensity={intensity} />}
       {/* rain */}
       {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder} intensity={intensity} />}
       {/* hail */}
@@ -59,8 +66,10 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {isSnow && <Snow heavy={code === 75 || code === 86} />}
       {/* dust / sand storm */}
       {isDust && <SandStorm intensity={intensity} />}
+      {/* tornado / whirlwind */}
+      {isTornado && <Tornado />}
       {/* wind streaks */}
-      {isWindy && !isRain && !isSnow && !isDust && <Wind />}
+      {isWindy && !isRain && !isSnow && !isDust && !isTornado && <Wind />}
       {/* freezing-cold frost crystals overlay */}
       {isFrost && <Frost />}
       {/* lightning */}
@@ -336,6 +345,103 @@ export function Fog() {
           filter: "blur(8px)",
         } as CSSProperties} />
       ))}
+    </div>
+  );
+}
+
+/** Haze — moderate humidity, milky veil with subtle warm/yellow tinge. */
+export function Haze() {
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(40 25% 65% / .18), hsl(30 20% 55% / .28))",
+    } as CSSProperties}>
+      {arr(3).map((_, i) => (
+        <div key={i} style={{
+          position: "absolute", top: `${15 + i * 28}%`, left: 0, right: 0, height: "32%",
+          background: "radial-gradient(ellipse at center, hsl(40 30% 75% / .22), transparent 75%)",
+          filter: "blur(18px)",
+          animation: `fx-fog ${28 + i * 5}s ease-in-out ${-i * 6}s infinite alternate`,
+        } as CSSProperties}/>
+      ))}
+    </div>
+  );
+}
+
+/** Smoke — wildfire/industrial: brown-grey rising plumes with darkened sky. */
+export function Smoke({ intensity = 1 }: { intensity?: number }) {
+  const plumes = Math.round(10 * intensity);
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(20 30% 25% / .35), hsl(15 25% 18% / .55))",
+    } as CSSProperties}>
+      {arr(plumes).map((_, i) => {
+        const left = rand(0, 100, i + 401);
+        const dur = rand(14, 26, i + 407);
+        const delay = rand(0, 12, i + 411);
+        const size = rand(60, 140, i + 413);
+        const x = rand(-20, 20, i + 417);
+        return (
+          <div key={i} style={{
+            position: "absolute", bottom: "-10%", left: `${left}%`,
+            width: size, height: size, borderRadius: "50%",
+            background: "radial-gradient(circle, hsl(20 15% 35% / .7), transparent 70%)",
+            filter: "blur(8px)",
+            ["--fx-x" as any]: `${x}px`,
+            animation: `fx-smoke-rise ${dur}s ease-out ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Tornado — a swirling debris funnel sweeping across with darkened sky. */
+export function Tornado() {
+  return (
+    <div className="fx-layer" style={{
+      background: "linear-gradient(180deg, hsl(210 25% 12% / .55), hsl(220 30% 8% / .75))",
+    } as CSSProperties}>
+      {/* Wind streaks */}
+      {arr(18).map((_, i) => {
+        const top = rand(0, 100, i + 501);
+        const dur = rand(0.8, 1.8, i + 507);
+        const delay = rand(0, 2, i + 511);
+        const len = rand(120, 280, i + 513);
+        return (
+          <span key={i} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: len, height: 1,
+            background: "linear-gradient(to right, transparent, hsl(0 0% 90% / .7), transparent)",
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+      {/* Funnel */}
+      <div style={{
+        position: "absolute", top: "0%", left: "30%",
+        width: 0, height: 0,
+        borderLeft: "60px solid transparent",
+        borderRight: "60px solid transparent",
+        borderTop: "120vh solid hsl(220 15% 15% / .65)",
+        filter: "blur(6px)",
+        animation: "fx-tornado 8s linear infinite",
+        transformOrigin: "center top",
+      } as CSSProperties}/>
+      {/* Debris specks */}
+      {arr(30).map((_, i) => {
+        const top = rand(10, 90, i + 601);
+        const dur = rand(0.6, 1.2, i + 607);
+        const delay = rand(0, 1, i + 611);
+        const size = rand(2, 4, i + 613);
+        return (
+          <span key={`d${i}`} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: size, height: size, borderRadius: "50%",
+            background: "hsl(30 30% 40%)",
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
     </div>
   );
 }
@@ -724,30 +830,76 @@ export function AnimatedSun({ size = 64, warm }: { size?: number; warm?: boolean
   );
 }
 
+/**
+ * Realistic animated moon. Renders a textured disc (maria + craters),
+ * then applies a phase-accurate shadow mask. Subtle breathing halo.
+ */
 export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { size?: number; illumination?: number; phase?: number }) {
-  // phase 0..1: 0 new, .25 first qtr, .5 full, .75 last qtr
   const r = size / 2;
-  const offset = (1 - illumination) * size * (phase < 0.5 ? -1 : 1);
+  const uid = `m-${size}-${Math.round(phase * 100)}`;
+  // Phase shadow geometry — a circular cutter offset along the terminator.
+  // phase: 0 new, 0.25 first qtr (waxing), 0.5 full, 0.75 last qtr (waning).
+  const waxing = phase < 0.5;
+  const k = Math.cos(phase * Math.PI * 2); // +1 at new, -1 at full
+  const shadowOffset = k * r;  // shifts cutter across the disc
+  const shadowSide = waxing ? -1 : 1;
   return (
     <div style={{ position: "relative", width: size, height: size } as CSSProperties}>
+      {/* halo */}
       <div style={{
-        position: "absolute", inset: -8, borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(220 80% 90% / .25), transparent 70%)",
-        animation: "fx-sun-pulse 5s ease-in-out infinite",
-      } as CSSProperties} />
+        position: "absolute", inset: -size * 0.22, borderRadius: "50%",
+        background: "radial-gradient(circle, hsl(45 60% 92% / .35), hsl(220 60% 80% / .12) 55%, transparent 75%)",
+        animation: "fx-sun-pulse 6s ease-in-out infinite",
+        filter: "blur(2px)",
+      } as CSSProperties}/>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ position:"absolute", inset:0 }}>
         <defs>
-          <radialGradient id="moonGrad" cx="40%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="hsl(48 30% 96%)" />
-            <stop offset="100%" stopColor="hsl(220 25% 70%)" />
+          <radialGradient id={`${uid}-surface`} cx="38%" cy="32%" r="75%">
+            <stop offset="0%" stopColor="hsl(45 35% 96%)" />
+            <stop offset="60%" stopColor="hsl(40 20% 82%)" />
+            <stop offset="100%" stopColor="hsl(30 18% 65%)" />
           </radialGradient>
-          <mask id={`moonMask-${size}`}>
-            <rect width={size} height={size} fill="white" />
-            <ellipse cx={r + offset} cy={r} rx={r * 0.96} ry={r * 0.96} fill="black" />
+          <radialGradient id={`${uid}-rim`} cx="50%" cy="50%" r="50%">
+            <stop offset="85%" stopColor="hsl(220 20% 8% / 0)" />
+            <stop offset="100%" stopColor="hsl(220 25% 4% / .55)" />
+          </radialGradient>
+          <clipPath id={`${uid}-disc`}>
+            <circle cx={r} cy={r} r={r * 0.96} />
+          </clipPath>
+          <mask id={`${uid}-mask`}>
+            <rect width={size} height={size} fill="white"/>
+            {/* dark cutter — bigger circle offset to carve out the unlit side */}
+            <ellipse
+              cx={r + shadowOffset * shadowSide}
+              cy={r}
+              rx={r * 1.02 * Math.max(0.05, Math.abs(k))}
+              ry={r * 0.96}
+              fill="black"
+            />
           </mask>
         </defs>
-        <circle cx={r} cy={r} r={r * 0.94} fill="hsl(220 30% 18%)" />
-        <circle cx={r} cy={r} r={r * 0.94} fill="url(#moonGrad)" mask={`url(#moonMask-${size})`} />
+        {/* dark disc backdrop (visible side that's in shadow) */}
+        <circle cx={r} cy={r} r={r * 0.96} fill="hsl(225 22% 9%)" />
+        {/* lit moon with surface texture, masked by phase */}
+        <g mask={`url(#${uid}-mask)`}>
+          <circle cx={r} cy={r} r={r * 0.96} fill={`url(#${uid}-surface)`} />
+          <g clipPath={`url(#${uid}-disc)`} opacity="0.55">
+            {/* maria (dark patches) */}
+            <ellipse cx={r * 0.78} cy={r * 0.82} rx={r * 0.28} ry={r * 0.22} fill="hsl(30 15% 45%)"/>
+            <ellipse cx={r * 1.15} cy={r * 0.92} rx={r * 0.22} ry={r * 0.18} fill="hsl(30 15% 50%)"/>
+            <ellipse cx={r * 1.05} cy={r * 1.25} rx={r * 0.18} ry={r * 0.14} fill="hsl(30 12% 48%)"/>
+            <ellipse cx={r * 0.62} cy={r * 1.18} rx={r * 0.12} ry={r * 0.10} fill="hsl(30 12% 50%)"/>
+            {/* craters */}
+            <circle cx={r * 1.30} cy={r * 0.55} r={r * 0.06} fill="hsl(30 10% 40%)"/>
+            <circle cx={r * 1.30} cy={r * 0.55} r={r * 0.045} fill="hsl(40 30% 88%)" opacity=".4"/>
+            <circle cx={r * 0.55} cy={r * 0.55} r={r * 0.05} fill="hsl(30 10% 40%)"/>
+            <circle cx={r * 1.45} cy={r * 1.20} r={r * 0.07} fill="hsl(30 10% 38%)"/>
+            <circle cx={r * 0.50} cy={r * 1.40} r={r * 0.04} fill="hsl(30 10% 42%)"/>
+            <circle cx={r * 1.00} cy={r * 0.40} r={r * 0.035} fill="hsl(30 10% 42%)"/>
+          </g>
+        </g>
+        {/* rim shading */}
+        <circle cx={r} cy={r} r={r * 0.96} fill={`url(#${uid}-rim)`} />
       </svg>
     </div>
   );
