@@ -268,6 +268,26 @@
     0%,100% { opacity: .35; }
     50%     { opacity: .55; }
   }
+  @keyframes fx-alert-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--alert-color) / 0); background-color: hsl(var(--alert-color) / 0.18); }
+    35%      { background-color: hsl(220 8% 24% / 0.35); }
+    70%      { background-color: hsl(var(--alert-color) / 0.30); box-shadow: 0 0 24px 2px hsl(var(--alert-color) / 0.55); }
+  }
+  @keyframes fx-alert-icon {
+    0%,100% { transform: scale(1) rotate(0deg); }
+    20%     { transform: scale(1.12) rotate(-6deg); }
+    40%     { transform: scale(1.12) rotate(6deg); }
+    60%     { transform: scale(1) rotate(0deg); }
+  }
+  @keyframes fx-tornado {
+    0%   { transform: translate3d(-15%,0,0) rotate(0deg); }
+    100% { transform: translate3d(115%,0,0) rotate(720deg); }
+  }
+  @keyframes fx-smoke-rise {
+    0%   { transform: translate3d(0,10%,0) scale(.7); opacity: 0; }
+    20%  { opacity: .55; }
+    100% { transform: translate3d(var(--fx-x,0),-110%,0) scale(1.6); opacity: 0; }
+  }
   .fx-layer {
     position: absolute; inset: 0; pointer-events: none; overflow: hidden;
   }
