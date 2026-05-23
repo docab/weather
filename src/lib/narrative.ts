@@ -35,20 +35,27 @@ export function buildNarrative(
   const info = describeWeather(weather.weatherCode, weather.isDay);
   const parts: string[] = [];
 
-  // Opening line on conditions
-  if (info.sky === "clear") {
-    parts.push(`Lovely and clear out — proper bright sky.`);
-  } else if (info.sky === "cloudy" && weather.precipProb < 30) {
-    parts.push(`Grey lid of cloud, but it should stay dry.`);
-  } else if (info.sky === "rain") {
-    parts.push(`A bit grim out — damp, drizzly sort of day.`);
-  } else if (info.sky === "snow") {
-    parts.push(`Wintry one — snow's on the cards, wrap up.`);
-  } else if (info.sky === "night") {
-    parts.push(`Quiet, clear night out there.`);
-  } else {
-    parts.push(`Bit of an in-between day, honestly.`);
-  }
+  // Opening line — temperature first, sky second. Don't call a 30°C day "lovely".
+  const f = weather.feelsLike;
+  let tempPhrase = "";
+  if (f >= 38) tempPhrase = "Brutal heat out there — dangerously hot.";
+  else if (f >= 33) tempPhrase = "Seriously hot — properly sweltering.";
+  else if (f >= 28) tempPhrase = "Hot one today — it's baking out.";
+  else if (f >= 23) tempPhrase = "Warm and pleasant.";
+  else if (f >= 16) tempPhrase = "Mild out — comfortable enough.";
+  else if (f >= 8)  tempPhrase = "On the cool side.";
+  else if (f >= 2)  tempPhrase = "Properly chilly.";
+  else if (f >= -5) tempPhrase = "Bitterly cold — bundle up.";
+  else              tempPhrase = "Dangerously cold — limit time outside.";
+
+  let skyPhrase = "";
+  if (info.sky === "clear") skyPhrase = weather.isDay ? " Bright, clear sky." : " Clear night sky.";
+  else if (info.sky === "cloudy" && weather.precipProb < 30) skyPhrase = " Grey lid of cloud, but it should stay dry.";
+  else if (info.sky === "rain") skyPhrase = " Damp and drizzly with it.";
+  else if (info.sky === "snow") skyPhrase = " Snow's on the cards too — wrap up.";
+  else if (info.sky === "night") skyPhrase = " Quiet night out there.";
+
+  parts.push(tempPhrase + skyPhrase);
 
   parts[0] += tempFeel(weather.temp, weather.feelsLike);
   const shift = timeOfDayShift(weather);
