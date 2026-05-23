@@ -210,8 +210,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
 }
 
 function deriveAlerts(
-  c: { wind_gusts_10m: number; temperature_2m: number },
-  d: { precipitation_sum: number[]; weather_code: number[]; temperature_2m_max: number[] },
+  c: { wind_gusts_10m: number; temperature_2m: number; apparent_temperature?: number },
+  d: { precipitation_sum: number[]; weather_code: number[]; temperature_2m_max: number[]; temperature_2m_min: number[] },
   hourly: { weather_code: number[] }
 ): WeatherData["alerts"] {
   const out: WeatherData["alerts"] = [];
@@ -231,7 +231,9 @@ function deriveAlerts(
       description: `${Math.round(d.precipitation_sum[0])} mm of rain forecast — flooding possible in low-lying areas.`,
     });
   }
-  if (hourly.weather_code.slice(0, 24).some(code => code >= 71 && code <= 86)) {
+  // Snow codes only: 71,73,75,77,85,86 (NOT 80–82 which are rain showers)
+  const snowCodes = new Set([71, 73, 75, 77, 85, 86]);
+  if (hourly.weather_code.slice(0, 24).some(code => snowCodes.has(code))) {
     out.push({
       id: "snow",
       title: "Snow & Ice Warning",
@@ -239,12 +241,25 @@ function deriveAlerts(
       description: "Snowfall expected within the next 24 hours.",
     });
   }
-  if ((d.temperature_2m_max[0] ?? 0) >= 30) {
+  const maxT = d.temperature_2m_max[0] ?? 0;
+  const feels = c.apparent_temperature ?? c.temperature_2m;
+  const heatPeak = Math.max(maxT, feels);
+  if (heatPeak >= 27) {
     out.push({
       id: "heat",
-      title: "Heat-Health Alert",
-      severity: (d.temperature_2m_max[0] ?? 0) >= 35 ? "amber" : "yellow",
-      description: `Temperatures reaching ${Math.round(d.temperature_2m_max[0])}°C. Stay hydrated.`,
+      title: heatPeak >= 35 ? "Extreme Heat Warning" : heatPeak >= 32 ? "Heat-Health Alert" : "Hot Weather Advisory",
+      severity: heatPeak >= 35 ? "red" : heatPeak >= 32 ? "amber" : "yellow",
+      description: `Highs around ${Math.round(maxT)}°C${feels > maxT + 1 ? `, feeling like ${Math.round(feels)}°C` : ""}. Stay hydrated, seek shade, avoid midday sun.`,
+    });
+  }
+  // Cold snap (only flag if it's actually cold — guards against tropical climates)
+  const minT = d.temperature_2m_min[0] ?? 99;
+  if (minT <= -2 || feels <= -5) {
+    out.push({
+      id: "cold",
+      title: minT <= -8 ? "Severe Cold Warning" : "Cold Weather Advisory",
+      severity: minT <= -8 ? "amber" : "yellow",
+      description: `Lows near ${Math.round(minT)}°C — risk of ice, dress in layers.`,
     });
   }
   return out;
