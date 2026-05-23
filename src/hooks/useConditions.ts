@@ -13,7 +13,7 @@ async function fetchConditions(loc: Location): Promise<LocationConditions> {
     weather,
     pollen: air.pollen,
     aqi: air.aqi,
-    narrative: buildNarrative(weather, air.pollen, air.aqi),
+    narrative: buildNarrative(weather, air.pollen, air.aqi, loc),
     outfit: buildOutfit(weather),
     umbrella: buildUmbrella(weather),
     perfume: buildPerfume(weather, air.pollen),
