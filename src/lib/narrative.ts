@@ -38,14 +38,16 @@ export function buildNarrative(
   // Opening line — temperature first, sky second. Don't call a 30°C day "lovely".
   const f = weather.feelsLike;
   let tempPhrase = "";
-  if (f >= 38) tempPhrase = "Brutal heat out there — dangerously hot.";
-  else if (f >= 33) tempPhrase = "Seriously hot — properly sweltering.";
-  else if (f >= 28) tempPhrase = "Hot one today — it's baking out.";
-  else if (f >= 23) tempPhrase = "Warm and pleasant.";
+  if (f >= 40)      tempPhrase = "Brutal heat out there — dangerously hot.";
+  else if (f >= 35) tempPhrase = "Seriously hot — properly sweltering.";
+  else if (f >= 30) tempPhrase = "Hot one today — it's baking out.";
+  else if (f >= 26) tempPhrase = "Properly warm — toasty out there.";
+  else if (f >= 21) tempPhrase = "Warm and pleasant.";
   else if (f >= 16) tempPhrase = "Mild out — comfortable enough.";
-  else if (f >= 8)  tempPhrase = "On the cool side.";
-  else if (f >= 2)  tempPhrase = "Properly chilly.";
-  else if (f >= -5) tempPhrase = "Bitterly cold — bundle up.";
+  else if (f >= 10) tempPhrase = "A touch cool, nothing dramatic.";
+  else if (f >= 4)  tempPhrase = "On the cool side — grab a jacket.";
+  else if (f >= 0)  tempPhrase = "Properly chilly.";
+  else if (f >= -8) tempPhrase = "Bitterly cold — bundle up.";
   else              tempPhrase = "Dangerously cold — limit time outside.";
 
   let skyPhrase = "";
