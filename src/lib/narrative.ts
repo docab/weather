@@ -1,6 +1,19 @@
-import type { LocationConditions, WeatherData, PollenData, AqiData } from "./types";
+import type { LocationConditions, WeatherData, PollenData, AqiData, Location } from "./types";
 import { describeWeather } from "./weatherCodes";
 import { severityLabel } from "./severity";
+
+// Deterministic small hash from a string -> 0..(mod-1)
+function seedFrom(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+function pick<T>(arr: T[], seed: number, salt = 0): T {
+  return arr[(seed + salt) % arr.length];
+}
 
 function tempFeel(actual: number, feels: number): string {
   const diff = actual - feels;
@@ -11,7 +24,7 @@ function tempFeel(actual: number, feels: number): string {
   return ` Feels about ${Math.round(feels)}° really.`;
 }
 
-function timeOfDayShift(weather: WeatherData): string {
+function timeOfDayShift(weather: WeatherData, seed: number): string {
   const next8 = weather.hourly.slice(0, 8);
   if (next8.length < 4) return "";
   const startCode = next8[0].weatherCode;
@@ -21,8 +34,16 @@ function timeOfDayShift(weather: WeatherData): string {
   const startRain = next8.slice(0, 3).some(h => h.precipProb >= 50);
   const lateRain = next8.slice(-3).some(h => h.precipProb >= 50);
 
-  if (!startRain && lateRain) return ` Dry for now, but the rain creeps in later — chuck a brolly in your bag.`;
-  if (startRain && !lateRain) return ` Wet start, then it eases off through the day.`;
+  if (!startRain && lateRain) return pick([
+    " Dry for now, but the rain creeps in later — chuck a brolly in your bag.",
+    " Stays dry a while, then the showers roll in — pack a brolly.",
+    " Bone dry now, wetter by evening. Don't get caught out.",
+  ], seed, 7);
+  if (startRain && !lateRain) return pick([
+    " Wet start, then it eases off through the day.",
+    " Damp this morning, dries out as the day goes on.",
+    " Showers early, brighter skies later.",
+  ], seed, 11);
   if (startInfo.sky !== lateInfo.sky) return ` Starts off ${startInfo.short.toLowerCase()}, turning ${lateInfo.short.toLowerCase()} by the evening.`;
   return "";
 }
@@ -30,49 +51,94 @@ function timeOfDayShift(weather: WeatherData): string {
 export function buildNarrative(
   weather: WeatherData,
   pollen: PollenData,
-  aqi: AqiData
+  aqi: AqiData,
+  location?: Location,
 ): string {
   const info = describeWeather(weather.weatherCode, weather.isDay);
   const parts: string[] = [];
+  const seedStr = location ? `${location.id}|${location.name}|${location.latitude.toFixed(2)}` : "default";
+  const seed = seedFrom(seedStr);
 
-  // Opening line — temperature first, sky second. Don't call a 30°C day "lovely".
+  // Opening line — temperature first, sky second. Pick from a varied pool seeded
+  // per-location so two nearby places don't read identically.
   const f = weather.feelsLike;
-  let tempPhrase = "";
-  if (f >= 40)      tempPhrase = "Brutal heat out there — dangerously hot.";
-  else if (f >= 35) tempPhrase = "Seriously hot — properly sweltering.";
-  else if (f >= 30) tempPhrase = "Hot one today — it's baking out.";
-  else if (f >= 26) tempPhrase = "Properly warm — toasty out there.";
-  else if (f >= 21) tempPhrase = "Warm and pleasant.";
-  else if (f >= 16) tempPhrase = "Mild out — comfortable enough.";
-  else if (f >= 10) tempPhrase = "A touch cool, nothing dramatic.";
-  else if (f >= 4)  tempPhrase = "On the cool side — grab a jacket.";
-  else if (f >= 0)  tempPhrase = "Properly chilly.";
-  else if (f >= -8) tempPhrase = "Bitterly cold — bundle up.";
-  else              tempPhrase = "Dangerously cold — limit time outside.";
+  let tempPool: string[];
+  if (f >= 40)      tempPool = ["Brutal heat — dangerously hot.", "Furnace day — genuinely dangerous heat.", "Off-the-charts hot. Stay indoors if you can."];
+  else if (f >= 35) tempPool = ["Seriously hot — properly sweltering.", "Sweltering out — relentless heat.", "Roasting today, no breeze to save you."];
+  else if (f >= 30) tempPool = ["Hot one — it's baking out.", "Properly hot today — sun's brutal.", "Heat's on — you'll feel it the second you step out."];
+  else if (f >= 26) tempPool = ["Properly warm — toasty out there.", "Hot and sticky kind of day.", "Genuinely warm — short sleeves weather."];
+  else if (f >= 21) tempPool = ["Warm and pleasant.", "Lovely warmth in the air.", "Nicely warm — proper outdoors weather."];
+  else if (f >= 16) tempPool = ["Mild out — comfortable enough.", "Pleasant and mild.", "Easy temperature — nothing to fight."];
+  else if (f >= 10) tempPool = ["A touch cool, nothing dramatic.", "Fresh out — light layer'll do.", "Cool but manageable."];
+  else if (f >= 4)  tempPool = ["On the cool side — grab a jacket.", "Crisp out there, jacket weather.", "Nippy — you'll want a coat."];
+  else if (f >= 0)  tempPool = ["Properly chilly.", "Cold edge to the air today.", "Real bite to it — cold one."];
+  else if (f >= -8) tempPool = ["Bitterly cold — bundle up.", "Bone-cold out there. Layer up.", "Freezing properly — wrap up."];
+  else              tempPool = ["Dangerously cold — limit time outside.", "Arctic out there. Keep it brief.", "Genuinely dangerous cold."];
+  let tempPhrase = pick(tempPool, seed);
 
   let skyPhrase = "";
-  if (info.sky === "clear") skyPhrase = weather.isDay ? " Bright, clear sky." : " Clear night sky.";
-  else if (info.sky === "cloudy" && weather.precipProb < 30) skyPhrase = " Grey lid of cloud, but it should stay dry.";
-  else if (info.sky === "rain") skyPhrase = " Damp and drizzly with it.";
-  else if (info.sky === "snow") skyPhrase = " Snow's on the cards too — wrap up.";
-  else if (info.sky === "night") skyPhrase = " Quiet night out there.";
+  if (info.sky === "clear") {
+    skyPhrase = weather.isDay
+      ? " " + pick(["Bright, clear sky.", "Sun's out, not a cloud in sight.", "Big blue sky overhead."], seed, 1)
+      : " " + pick(["Clear night sky.", "Stars out, sky's clear.", "Crisp clear night."], seed, 1);
+  } else if (info.sky === "cloudy" && weather.precipProb < 30) {
+    skyPhrase = " " + pick([
+      "Grey lid of cloud, but it should stay dry.",
+      "Overcast but the rain's holding off.",
+      "Cloudy throughout — dry though.",
+    ], seed, 2);
+  } else if (info.sky === "rain") {
+    skyPhrase = " " + pick([
+      "Damp and drizzly with it.",
+      "Wet one — rain on and off.",
+      "Rain in the mix, pavements'll be slick.",
+    ], seed, 3);
+  } else if (info.sky === "snow") {
+    skyPhrase = " " + pick([
+      "Snow's on the cards too — wrap up.",
+      "Snow falling — slippery underfoot.",
+      "Flakes coming down, mind your step.",
+    ], seed, 4);
+  } else if (info.sky === "night") {
+    skyPhrase = " " + pick(["Quiet night out there.", "Still night air.", "Calm out under the dark."], seed, 5);
+  }
 
   parts.push(tempPhrase + skyPhrase);
 
   parts[0] += tempFeel(weather.temp, weather.feelsLike);
-  const shift = timeOfDayShift(weather);
+  const shift = timeOfDayShift(weather, seed);
   if (shift) parts.push(shift.trim());
 
-  if (weather.windGust >= 50) parts.push(`Gusts up around ${Math.round(weather.windGust)} mph — hold onto your hat.`);
-  else if (weather.windSpeed >= 25) parts.push(`Properly blustery, wind's pushing ${Math.round(weather.windSpeed)} mph.`);
+  if (weather.windGust >= 50) parts.push(pick([
+    `Gusts up around ${Math.round(weather.windGust)} mph — hold onto your hat.`,
+    `Wind's vicious — gusting to ${Math.round(weather.windGust)} mph.`,
+    `${Math.round(weather.windGust)} mph gusts out there, brace yourself.`,
+  ], seed, 13));
+  else if (weather.windSpeed >= 25) parts.push(pick([
+    `Properly blustery, wind's pushing ${Math.round(weather.windSpeed)} mph.`,
+    `Breezy edge to the day — ${Math.round(weather.windSpeed)} mph wind.`,
+    `Wind's making itself known at ${Math.round(weather.windSpeed)} mph.`,
+  ], seed, 17));
 
   if (pollen.level === "high" || pollen.level === "very-high") {
-    parts.push(`Pollen's ${severityLabel[pollen.level].toLowerCase()} too — mostly ${pollen.dominantSpecies.toLowerCase()}. Worth taking an antihistamine.`);
+    parts.push(pick([
+      `Pollen's ${severityLabel[pollen.level].toLowerCase()} too — mostly ${pollen.dominantSpecies.toLowerCase()}. Worth taking an antihistamine.`,
+      `Heavy ${pollen.dominantSpecies.toLowerCase()} pollen about — antihistamine day if you suffer.`,
+      `${pollen.dominantSpecies} pollen is up — keep an eye if you're sensitive.`,
+    ], seed, 19));
   }
   if (aqi.level === "high" || aqi.level === "very-high") {
-    parts.push(`Air's a bit rough today, so go easy if your lungs are sensitive.`);
+    parts.push(pick([
+      `Air's a bit rough today, so go easy if your lungs are sensitive.`,
+      `Air quality's not great — take it easy outdoors.`,
+      `Pollution's on the higher side, mind sensitive lungs.`,
+    ], seed, 23));
   }
-  if (weather.uvIndex >= 6) parts.push(`UV's strong (${Math.round(weather.uvIndex)}) — get the sun cream on.`);
+  if (weather.uvIndex >= 6) parts.push(pick([
+    `UV's strong (${Math.round(weather.uvIndex)}) — get the sun cream on.`,
+    `Sun's biting (UV ${Math.round(weather.uvIndex)}) — slap on SPF.`,
+    `High UV today at ${Math.round(weather.uvIndex)} — don't skip sunscreen.`,
+  ], seed, 29));
 
   return parts.join(" ");
 }
