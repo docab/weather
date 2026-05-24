@@ -27,7 +27,7 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isSnow    = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain    = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
   const isFog     = code === 45 || code === 48;
-  const isWindy   = weather.windSpeed >= 18;
+  const isWindy   = weather.windSpeed >= 8;     // even a gentle breeze shows a couple of wisps
   const cloud     = weather.cloudCover;
   const visKm     = weather.visibility ? weather.visibility / 1000 : 99;
   const isMist    = !isFog && !isRain && !isSnow && weather.humidity >= 92;
@@ -69,7 +69,7 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {/* tornado / whirlwind */}
       {isTornado && <Tornado />}
       {/* wind streaks */}
-      {isWindy && !isRain && !isSnow && !isDust && !isTornado && <Wind />}
+      {isWindy && !isRain && !isSnow && !isDust && !isTornado && <Wind speed={weather.windSpeed} gust={weather.windGust} />}
       {/* freezing-cold frost crystals overlay */}
       {isFrost && <Frost />}
       {/* lightning */}
@@ -446,23 +446,43 @@ export function Tornado() {
   );
 }
 
-export function Wind() {
+/**
+ * Wind streaks — count, length, opacity and speed scale with wind speed (mph).
+ * Calm <10 mph: a few faint wisps. Strong 30+ mph: dense, fast streaks. Storm 50+ mph: violent.
+ */
+export function Wind({ speed = 18, gust = 0 }: { speed?: number; gust?: number }) {
+  const v = Math.max(speed, gust * 0.6);            // factor in gusts a little
+  const f = Math.max(0.4, Math.min(3, v / 18));     // 0.4 → 3
+  const count = Math.round(6 + 10 * f);
+  const baseOp = Math.min(0.9, 0.35 + f * 0.2);
   return (
     <div className="fx-layer">
-      {arr(8).map((_, i) => {
-        const top = rand(10, 90, i + 31);
-        const dur = rand(2.4, 4.2, i + 37);
+      {arr(count).map((_, i) => {
+        const top = rand(2, 96, i + 31);
+        const dur = rand(2.6, 4.4, i + 37) / f;     // faster with stronger wind
         const delay = rand(0, 4, i + 41);
-        const len = rand(60, 160, i + 43);
+        const len = rand(60, 180, i + 43) * Math.min(1.6, f);
+        const op = baseOp * rand(0.6, 1, i + 47);
+        const thickness = f > 1.6 ? 1.6 : 1;
         return (
           <span key={i} style={{
             position: "absolute", top: `${top}%`, left: 0,
-            width: `${len}px`, height: 1,
-            background: "linear-gradient(to right, transparent, hsl(0 0% 100% / .6), transparent)",
+            width: `${len}px`, height: thickness,
+            background: `linear-gradient(to right, transparent, hsl(0 0% 100% / ${op}), transparent)`,
             animation: `fx-wind ${dur}s linear ${delay}s infinite`,
           } as CSSProperties} />
         );
       })}
+      {/* swirling gust eddies for very strong wind */}
+      {f > 1.8 && arr(3).map((_, i) => (
+        <div key={`g${i}`} style={{
+          position: "absolute", top: `${rand(15, 75, i + 71)}%`, left: 0,
+          width: "55%", height: "30%",
+          background: "radial-gradient(ellipse at center, hsl(0 0% 100% / .12), transparent 70%)",
+          filter: "blur(14px)",
+          animation: `fx-wind ${rand(3.5, 5.5, i + 73) / f}s linear ${rand(0, 3, i + 75)}s infinite`,
+        } as CSSProperties} />
+      ))}
     </div>
   );
 }
@@ -578,29 +598,103 @@ export function MeteorFX({ active = false, count = 6 }: { active?: boolean; coun
 /* -----------------------------------------------------------------------
  * Pollen & AQI dust particles
  * ---------------------------------------------------------------------*/
+/**
+ * Pollen drift — density, size, speed and motion variance all scale with severity (0..3).
+ *  - low (0): a handful of slow, faint specks.
+ *  - moderate (1): noticeable drift.
+ *  - high (2): dense yellow cloud with strong sideways swirl.
+ *  - very-high (3): heavy plume — large, fast, swirling grains.
+ */
 export function PollenFX({ severity = 0 }: { severity?: number }) {
-  const count = 14 + severity * 12;
+  const f = severity; // 0..3
+  const count = Math.round(10 + f * 22);              // 10 → 76 grains
+  const sizeMin = 2 + f * 0.6;
+  const sizeMax = 4 + f * 2.2;
+  const speedMin = Math.max(4, 16 - f * 3);           // higher severity = faster
+  const speedMax = Math.max(8, 22 - f * 3);
+  const swirl = 18 + f * 22;                          // sideways amplitude
+  const glow = 4 + f * 4;
   const colours = ["hsl(56 90% 70%)", "hsl(40 90% 65%)", "hsl(80 70% 65%)", "hsl(28 90% 70%)"];
   return (
     <div className="fx-layer">
+      {/* yellow density haze for moderate+ */}
+      {f >= 2 && (
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, hsl(50 80% 60% / ${0.04 + f * 0.04}), transparent 70%)`,
+        } as CSSProperties}/>
+      )}
       {arr(count).map((_, i) => {
         const left = rand(0, 100, i + 91);
-        const size = rand(3, 7, i + 93);
-        const dur = rand(8, 18, i + 97);
+        const size = rand(sizeMin, sizeMax, i + 93);
+        const dur = rand(speedMin, speedMax, i + 97);
         const delay = rand(0, 8, i + 101);
-        const x = rand(-30, 30, i + 103);
+        const x = rand(-swirl, swirl, i + 103);
         const c = colours[i % colours.length];
         return (
           <span key={i} style={{
             position: "absolute", bottom: "-5%", left: `${left}%`,
             width: size, height: size, borderRadius: "50%",
             background: `radial-gradient(circle, ${c}, ${c.replace(")", " / 0)")} 70%)`,
-            boxShadow: `0 0 6px ${c}`,
+            boxShadow: `0 0 ${glow}px ${c}`,
             "--fx-x": `${x}px`,
             animation: `fx-float-up ${dur}s linear ${delay}s infinite`,
           } as CSSProperties} />
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Breeze — soft horizontal wisps coloured by air-quality severity.
+ * Used inside the AQI card.
+ *  0 low: green & clean   1 moderate: amber   2 high: orange   3 very-high: red.
+ */
+export function BreezeFX({ severity = 0 }: { severity?: number }) {
+  const palettes: { hue: number; sat: number; light: number }[] = [
+    { hue: 142, sat: 60, light: 65 }, // clean green
+    { hue: 38,  sat: 92, light: 60 }, // amber
+    { hue: 18,  sat: 90, light: 58 }, // orange
+    { hue: 0,   sat: 80, light: 58 }, // red
+  ];
+  const p = palettes[Math.min(3, severity)];
+  const count = 6 + severity * 3;
+  const baseOp = 0.18 + severity * 0.08;
+  return (
+    <div className="fx-layer" aria-hidden>
+      {/* tinted veil */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(180deg, hsl(${p.hue} ${p.sat}% ${p.light}% / ${0.05 + severity * 0.04}), transparent 75%)`,
+      } as CSSProperties}/>
+      {arr(count).map((_, i) => {
+        const top = rand(5, 92, i + 211);
+        const dur = rand(5, 9, i + 217);
+        const delay = rand(0, 5, i + 223);
+        const len = rand(80, 220, i + 227);
+        const op = baseOp * rand(0.7, 1.1, i + 231);
+        const thick = severity >= 2 ? 1.6 : 1;
+        return (
+          <span key={i} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: `${len}px`, height: thick,
+            background: `linear-gradient(to right, transparent, hsl(${p.hue} ${p.sat}% ${p.light}% / ${op}), transparent)`,
+            filter: severity >= 2 ? "blur(0.5px)" : undefined,
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+      {/* soft drifting puffs add depth at higher severities */}
+      {severity >= 1 && arr(3).map((_, i) => (
+        <div key={`b${i}`} style={{
+          position: "absolute", top: `${rand(10, 80, i + 251)}%`, left: 0,
+          width: "55%", height: "26%",
+          background: `radial-gradient(ellipse at center, hsl(${p.hue} ${p.sat}% ${p.light}% / ${0.08 + severity * 0.04}), transparent 70%)`,
+          filter: "blur(16px)",
+          animation: `fx-wind ${rand(8, 14, i + 257)}s linear ${rand(0, 6, i + 259)}s infinite`,
+        } as CSSProperties}/>
+      ))}
     </div>
   );
 }
@@ -837,18 +931,27 @@ export function AnimatedSun({ size = 64, warm }: { size?: number; warm?: boolean
 export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { size?: number; illumination?: number; phase?: number }) {
   const r = size / 2;
   const uid = `m-${size}-${Math.round(phase * 100)}`;
-  // Phase shadow geometry — a circular cutter offset along the terminator.
-  // phase: 0 new, 0.25 first qtr (waxing), 0.5 full, 0.75 last qtr (waning).
+  // Phase mask geometry.
+  // phase: 0 new · 0.25 first qtr (waxing) · 0.5 full · 0.75 last qtr (waning).
+  // Approach: build a mask where white = lit, black = shadow.
+  //   1. half-disc lit (right half if waxing, left half if waning)
+  //   2. add/remove an elliptical bulge sized by |cos(phase·2π)| to morph
+  //      between crescent (subtractive) and gibbous (additive).
   const waxing = phase < 0.5;
-  const k = Math.cos(phase * Math.PI * 2); // +1 at new, -1 at full
-  const shadowOffset = k * r;  // shifts cutter across the disc
-  const shadowSide = waxing ? -1 : 1;
+  const cos = Math.cos(phase * Math.PI * 2);          // +1 new, 0 quarter, -1 full
+  const bulgeRx = Math.abs(cos) * r * 0.96;
+  const gibbous = cos < 0;                            // illuminated > 50%
+  const litHalfX = waxing ? r : 0;                    // x of the lit half-rect
+  // Bulge sits centred on the terminator (centre of disc).
+  const bulgeFill = gibbous ? "white" : "black";
+  // For a crescent (lit < 50%) the black bulge eats into the lit half;
+  // for a gibbous (lit > 50%) the white bulge extends into the dark half.
   return (
     <div style={{ position: "relative", width: size, height: size } as CSSProperties}>
       {/* halo */}
       <div style={{
         position: "absolute", inset: -size * 0.22, borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(45 60% 92% / .35), hsl(220 60% 80% / .12) 55%, transparent 75%)",
+        background: `radial-gradient(circle, hsl(45 60% 92% / ${0.18 + illumination * 0.35}), hsl(220 60% 80% / .12) 55%, transparent 75%)`,
         animation: "fx-sun-pulse 6s ease-in-out infinite",
         filter: "blur(2px)",
       } as CSSProperties}/>
@@ -867,23 +970,20 @@ export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { 
             <circle cx={r} cy={r} r={r * 0.96} />
           </clipPath>
           <mask id={`${uid}-mask`}>
-            <rect width={size} height={size} fill="white"/>
-            {/* dark cutter — bigger circle offset to carve out the unlit side */}
-            <ellipse
-              cx={r + shadowOffset * shadowSide}
-              cy={r}
-              rx={r * 1.02 * Math.max(0.05, Math.abs(k))}
-              ry={r * 0.96}
-              fill="black"
-            />
+            {/* full shadow, then carve out lit area */}
+            <rect width={size} height={size} fill="black" />
+            {/* lit half-disc */}
+            <rect x={litHalfX} y={0} width={r} height={size} fill="white" />
+            {/* terminator bulge — adds (gibbous) or subtracts (crescent) from lit area */}
+            <ellipse cx={r} cy={r} rx={bulgeRx} ry={r * 0.96} fill={bulgeFill} />
           </mask>
         </defs>
         {/* dark disc backdrop (visible side that's in shadow) */}
         <circle cx={r} cy={r} r={r * 0.96} fill="hsl(225 22% 9%)" />
         {/* lit moon with surface texture, masked by phase */}
-        <g mask={`url(#${uid}-mask)`}>
+        <g mask={`url(#${uid}-mask)`} clipPath={`url(#${uid}-disc)`}>
           <circle cx={r} cy={r} r={r * 0.96} fill={`url(#${uid}-surface)`} />
-          <g clipPath={`url(#${uid}-disc)`} opacity="0.55">
+          <g opacity="0.55">
             {/* maria (dark patches) */}
             <ellipse cx={r * 0.78} cy={r * 0.82} rx={r * 0.28} ry={r * 0.22} fill="hsl(30 15% 45%)"/>
             <ellipse cx={r * 1.15} cy={r * 0.92} rx={r * 0.22} ry={r * 0.18} fill="hsl(30 15% 50%)"/>
