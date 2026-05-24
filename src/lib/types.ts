@@ -11,6 +11,9 @@ export interface Location {
   latitude: number;
   longitude: number;
   isAutoDetected?: boolean;
+  neighbourhood?: string;
+  district?: string;
+  localityPath?: string[];
 }
 
 export interface PollenBreakdown {
@@ -115,4 +118,5 @@ export interface NotificationPrefs {
   aqiAlerts: boolean;
   rainAlerts: boolean;
   alertsLastFired?: Record<string, string>;
+  detailedLocation?: boolean;
 }

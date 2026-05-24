@@ -36,6 +36,9 @@ export function useGeolocation(): GeoState {
               countryCode: g.countryCode,
               latitude: g.latitude,
               longitude: g.longitude,
+              neighbourhood: g.neighbourhood,
+              district: g.district,
+              localityPath: g.localityPath,
               isAutoDetected: true,
             };
             setLocation(loc);
@@ -51,7 +54,7 @@ export function useGeolocation(): GeoState {
         setLoading(false);
         setError(err.message || "Permission denied");
       },
-      { timeout: 8000, maximumAge: 1000 * 60 * 10 }
+      { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
     );
   };
 

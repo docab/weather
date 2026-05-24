@@ -12,10 +12,29 @@ export interface GeoResult {
   countryCode?: string;
   latitude: number;
   longitude: number;
+  neighbourhood?: string;
+  district?: string;
+  localityPath?: string[];
 }
 
 const POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
 const PARTIAL_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?$/i;
+
+// postcodes.io sometimes returns the literal "unparished" or
+// "<area>, unparished area" when no civil parish exists. Filter those out.
+function cleanParish(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const s = v.trim();
+  if (!s) return undefined;
+  if (/unparished/i.test(s)) return undefined;
+  return s;
+}
+function cleanName(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const s = v.trim();
+  if (!s || /unparished/i.test(s)) return undefined;
+  return s;
+}
 
 export async function geocodePlace(query: string): Promise<GeoResult[]> {
   const q = query.trim();
@@ -27,8 +46,15 @@ export async function geocodePlace(query: string): Promise<GeoResult[]> {
     if (r.ok) {
       const j = await r.json();
       const d = j.result;
+      const ward = cleanName(d.admin_ward);
+      const parish = cleanParish(d.parish);
+      const district = cleanName(d.admin_district);
+      const path = [district, parish, ward].filter(Boolean) as string[];
       return [{
-        name: `${d.parish || d.admin_ward || d.admin_district}`,
+        name: ward || parish || district || "Unknown",
+        neighbourhood: parish,
+        district,
+        localityPath: path,
         region: d.region || d.admin_county || d.country,
         postcode: d.postcode,
         country: "United Kingdom",
@@ -84,8 +110,15 @@ export async function reverseGeocode(lat: number, lon: number): Promise<GeoResul
     const j = await r.json();
     const d = j.result?.[0];
     if (d) {
+      const ward = cleanName(d.admin_ward);
+      const parish = cleanParish(d.parish);
+      const district = cleanName(d.admin_district);
+      const path = [district, parish, ward].filter(Boolean) as string[];
       return {
-        name: d.parish || d.admin_ward || d.admin_district,
+        name: ward || parish || district || "Current location",
+        neighbourhood: parish,
+        district,
+        localityPath: path,
         region: d.region || d.country,
         postcode: d.postcode,
         country: "United Kingdom",
@@ -341,6 +374,9 @@ export function makeLocation(g: GeoResult, opts: { id?: string; isAutoDetected?:
     countryCode: g.countryCode,
     latitude: g.latitude,
     longitude: g.longitude,
+    neighbourhood: g.neighbourhood,
+    district: g.district,
+    localityPath: g.localityPath,
     isAutoDetected: opts.isAutoDetected,
   };
 }

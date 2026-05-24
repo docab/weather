@@ -43,6 +43,7 @@ export const defaultPrefs: NotificationPrefs = {
   pollenThreshold: "high",
   aqiAlerts: true,
   rainAlerts: true,
+  detailedLocation: false,
 };
 
 export function loadPrefs(): NotificationPrefs {
