@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useConditionsForLocations } from "@/hooks/useConditions";
 import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations, renameLocation } from "@/lib/storage";
+import { loadPrefs, savePrefs } from "@/lib/storage";
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle } from "lucide-react";
@@ -29,6 +30,7 @@ const Index = () => {
   const [activeId, setActiveId] = useState<string>("");
   const [addOpen, setAddOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("today");
+  const [detailed, setDetailed] = useState<boolean>(() => !!loadPrefs().detailedLocation);
   const queryClient = useQueryClient();
 
   const allLocations: Location[] = useMemo(() => {
@@ -103,6 +105,7 @@ const Index = () => {
   };
 
   const refresh = () => {
+    geo.request();
     queryClient.invalidateQueries({ queryKey: ["conditions"] });
   };
 
@@ -128,7 +131,18 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/55 to-background/80" />
       </div>
 
-      <AppHeader onRefresh={refresh} refreshing={refreshing} />
+      <AppHeader
+        onRefresh={refresh}
+        refreshing={refreshing || geo.loading}
+        detailed={detailed}
+        onToggleDetailed={() => {
+          setDetailed(d => {
+            const next = !d;
+            savePrefs({ ...loadPrefs(), detailedLocation: next });
+            return next;
+          });
+        }}
+      />
 
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {bannerData && (
