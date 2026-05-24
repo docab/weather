@@ -6,12 +6,16 @@ import { aqiLabel, severityLabel } from "@/lib/severity";
 
 interface Props {
   conditions: LocationConditions;
+  detailed?: boolean;
 }
 
-export function LiveBanner({ conditions }: Props) {
+export function LiveBanner({ conditions, detailed }: Props) {
   const { weather, pollen, aqi, location } = conditions;
   const info = describeWeather(weather.weatherCode, weather.isDay);
   const SkyIcon = info.Icon;
+  const breadcrumb = detailed && location.localityPath && location.localityPath.length > 1
+    ? location.localityPath.join(" › ")
+    : null;
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card-elevated/80 px-4 py-3 shadow-card backdrop-blur-xl">
       <div className="absolute -top-1 left-3 flex items-center gap-1.5 rounded-b-md bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -27,7 +31,7 @@ export function LiveBanner({ conditions }: Props) {
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <MapPin className="h-3 w-3" />
-              {location.name}
+              {breadcrumb || location.name}
             </div>
           </div>
         </div>

@@ -10,9 +10,10 @@ interface Props {
   canAdd: boolean;
   onRemove?: (id: string) => void;
   onRename?: (id: string, name: string | undefined) => void;
+  detailed?: boolean;
 }
 
-export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onRemove, onRename }: Props) {
+export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onRemove, onRename, detailed }: Props) {
   return (
     <div className="-mx-4 overflow-x-auto px-4">
       <div className="flex gap-2">
@@ -21,7 +22,12 @@ export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onR
           const removable = !loc.isAutoDetected && !!onRemove;
           const renamable = !!onRename;
           const display = loc.customName || loc.name;
-          const subtitle = loc.customName ? loc.name : loc.postcode;
+          const breadcrumb = loc.localityPath && loc.localityPath.length > 1
+            ? loc.localityPath.slice(0, -1).join(" › ")
+            : undefined;
+          const subtitle = detailed
+            ? (breadcrumb || loc.region || loc.postcode)
+            : (loc.customName ? loc.name : loc.postcode);
           return (
             <div
               key={loc.id}

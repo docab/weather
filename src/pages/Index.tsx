@@ -147,7 +147,7 @@ const Index = () => {
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {bannerData && (
           <div className="mb-4">
-            <LiveBanner conditions={bannerData} />
+            <LiveBanner conditions={bannerData} detailed={detailed} />
           </div>
         )}
 
@@ -208,6 +208,7 @@ const Index = () => {
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
                   onRename={handleRename}
+                  detailed={detailed}
                 />
               </div>
 
@@ -230,6 +231,7 @@ const Index = () => {
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
                   onRename={handleRename}
+                  detailed={detailed}
                 />
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}
@@ -246,6 +248,7 @@ const Index = () => {
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
                   onRename={handleRename}
+                  detailed={detailed}
                 />
               </div>
               {activeQuery?.isLoading && <LocationViewSkeleton />}

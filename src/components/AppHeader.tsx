@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, RefreshCw, CloudSun } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, CloudSun, ListTree } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 interface Props {
   onRefresh?: () => void;
   refreshing?: boolean;
+  detailed?: boolean;
+  onToggleDetailed?: () => void;
 }
 
-export function AppHeader({ onRefresh, refreshing }: Props) {
+export function AppHeader({ onRefresh, refreshing, detailed, onToggleDetailed }: Props) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30 * 1000);
@@ -32,6 +34,18 @@ export function AppHeader({ onRefresh, refreshing }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {onToggleDetailed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleDetailed}
+              aria-label={detailed ? "Hide detailed location" : "Show detailed location"}
+              aria-pressed={detailed}
+              title={detailed ? "Detailed area: on" : "Detailed area: off"}
+            >
+              <ListTree className={`h-4 w-4 ${detailed ? "text-primary" : ""}`} />
+            </Button>
+          )}
           {onRefresh && (
             <Button variant="ghost" size="icon" onClick={onRefresh} aria-label="Refresh">
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
