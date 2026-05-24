@@ -931,18 +931,27 @@ export function AnimatedSun({ size = 64, warm }: { size?: number; warm?: boolean
 export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { size?: number; illumination?: number; phase?: number }) {
   const r = size / 2;
   const uid = `m-${size}-${Math.round(phase * 100)}`;
-  // Phase shadow geometry — a circular cutter offset along the terminator.
-  // phase: 0 new, 0.25 first qtr (waxing), 0.5 full, 0.75 last qtr (waning).
+  // Phase mask geometry.
+  // phase: 0 new · 0.25 first qtr (waxing) · 0.5 full · 0.75 last qtr (waning).
+  // Approach: build a mask where white = lit, black = shadow.
+  //   1. half-disc lit (right half if waxing, left half if waning)
+  //   2. add/remove an elliptical bulge sized by |cos(phase·2π)| to morph
+  //      between crescent (subtractive) and gibbous (additive).
   const waxing = phase < 0.5;
-  const k = Math.cos(phase * Math.PI * 2); // +1 at new, -1 at full
-  const shadowOffset = k * r;  // shifts cutter across the disc
-  const shadowSide = waxing ? -1 : 1;
+  const cos = Math.cos(phase * Math.PI * 2);          // +1 new, 0 quarter, -1 full
+  const bulgeRx = Math.abs(cos) * r * 0.96;
+  const gibbous = cos < 0;                            // illuminated > 50%
+  const litHalfX = waxing ? r : 0;                    // x of the lit half-rect
+  // Bulge sits centred on the terminator (centre of disc).
+  const bulgeFill = gibbous ? "white" : "black";
+  // For a crescent (lit < 50%) the black bulge eats into the lit half;
+  // for a gibbous (lit > 50%) the white bulge extends into the dark half.
   return (
     <div style={{ position: "relative", width: size, height: size } as CSSProperties}>
       {/* halo */}
       <div style={{
         position: "absolute", inset: -size * 0.22, borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(45 60% 92% / .35), hsl(220 60% 80% / .12) 55%, transparent 75%)",
+        background: `radial-gradient(circle, hsl(45 60% 92% / ${0.18 + illumination * 0.35}), hsl(220 60% 80% / .12) 55%, transparent 75%)`,
         animation: "fx-sun-pulse 6s ease-in-out infinite",
         filter: "blur(2px)",
       } as CSSProperties}/>
@@ -961,23 +970,20 @@ export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { 
             <circle cx={r} cy={r} r={r * 0.96} />
           </clipPath>
           <mask id={`${uid}-mask`}>
-            <rect width={size} height={size} fill="white"/>
-            {/* dark cutter — bigger circle offset to carve out the unlit side */}
-            <ellipse
-              cx={r + shadowOffset * shadowSide}
-              cy={r}
-              rx={r * 1.02 * Math.max(0.05, Math.abs(k))}
-              ry={r * 0.96}
-              fill="black"
-            />
+            {/* full shadow, then carve out lit area */}
+            <rect width={size} height={size} fill="black" />
+            {/* lit half-disc */}
+            <rect x={litHalfX} y={0} width={r} height={size} fill="white" />
+            {/* terminator bulge — adds (gibbous) or subtracts (crescent) from lit area */}
+            <ellipse cx={r} cy={r} rx={bulgeRx} ry={r * 0.96} fill={bulgeFill} />
           </mask>
         </defs>
         {/* dark disc backdrop (visible side that's in shadow) */}
         <circle cx={r} cy={r} r={r * 0.96} fill="hsl(225 22% 9%)" />
         {/* lit moon with surface texture, masked by phase */}
-        <g mask={`url(#${uid}-mask)`}>
+        <g mask={`url(#${uid}-mask)`} clipPath={`url(#${uid}-disc)`}>
           <circle cx={r} cy={r} r={r * 0.96} fill={`url(#${uid}-surface)`} />
-          <g clipPath={`url(#${uid}-disc)`} opacity="0.55">
+          <g opacity="0.55">
             {/* maria (dark patches) */}
             <ellipse cx={r * 0.78} cy={r * 0.82} rx={r * 0.28} ry={r * 0.22} fill="hsl(30 15% 45%)"/>
             <ellipse cx={r * 1.15} cy={r * 0.92} rx={r * 0.22} ry={r * 0.18} fill="hsl(30 15% 50%)"/>
