@@ -598,29 +598,103 @@ export function MeteorFX({ active = false, count = 6 }: { active?: boolean; coun
 /* -----------------------------------------------------------------------
  * Pollen & AQI dust particles
  * ---------------------------------------------------------------------*/
+/**
+ * Pollen drift — density, size, speed and motion variance all scale with severity (0..3).
+ *  - low (0): a handful of slow, faint specks.
+ *  - moderate (1): noticeable drift.
+ *  - high (2): dense yellow cloud with strong sideways swirl.
+ *  - very-high (3): heavy plume — large, fast, swirling grains.
+ */
 export function PollenFX({ severity = 0 }: { severity?: number }) {
-  const count = 14 + severity * 12;
+  const f = severity; // 0..3
+  const count = Math.round(10 + f * 22);              // 10 → 76 grains
+  const sizeMin = 2 + f * 0.6;
+  const sizeMax = 4 + f * 2.2;
+  const speedMin = Math.max(4, 16 - f * 3);           // higher severity = faster
+  const speedMax = Math.max(8, 22 - f * 3);
+  const swirl = 18 + f * 22;                          // sideways amplitude
+  const glow = 4 + f * 4;
   const colours = ["hsl(56 90% 70%)", "hsl(40 90% 65%)", "hsl(80 70% 65%)", "hsl(28 90% 70%)"];
   return (
     <div className="fx-layer">
+      {/* yellow density haze for moderate+ */}
+      {f >= 2 && (
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, hsl(50 80% 60% / ${0.04 + f * 0.04}), transparent 70%)`,
+        } as CSSProperties}/>
+      )}
       {arr(count).map((_, i) => {
         const left = rand(0, 100, i + 91);
-        const size = rand(3, 7, i + 93);
-        const dur = rand(8, 18, i + 97);
+        const size = rand(sizeMin, sizeMax, i + 93);
+        const dur = rand(speedMin, speedMax, i + 97);
         const delay = rand(0, 8, i + 101);
-        const x = rand(-30, 30, i + 103);
+        const x = rand(-swirl, swirl, i + 103);
         const c = colours[i % colours.length];
         return (
           <span key={i} style={{
             position: "absolute", bottom: "-5%", left: `${left}%`,
             width: size, height: size, borderRadius: "50%",
             background: `radial-gradient(circle, ${c}, ${c.replace(")", " / 0)")} 70%)`,
-            boxShadow: `0 0 6px ${c}`,
+            boxShadow: `0 0 ${glow}px ${c}`,
             "--fx-x": `${x}px`,
             animation: `fx-float-up ${dur}s linear ${delay}s infinite`,
           } as CSSProperties} />
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Breeze — soft horizontal wisps coloured by air-quality severity.
+ * Used inside the AQI card.
+ *  0 low: green & clean   1 moderate: amber   2 high: orange   3 very-high: red.
+ */
+export function BreezeFX({ severity = 0 }: { severity?: number }) {
+  const palettes: { hue: number; sat: number; light: number }[] = [
+    { hue: 142, sat: 60, light: 65 }, // clean green
+    { hue: 38,  sat: 92, light: 60 }, // amber
+    { hue: 18,  sat: 90, light: 58 }, // orange
+    { hue: 0,   sat: 80, light: 58 }, // red
+  ];
+  const p = palettes[Math.min(3, severity)];
+  const count = 6 + severity * 3;
+  const baseOp = 0.18 + severity * 0.08;
+  return (
+    <div className="fx-layer" aria-hidden>
+      {/* tinted veil */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(180deg, hsl(${p.hue} ${p.sat}% ${p.light}% / ${0.05 + severity * 0.04}), transparent 75%)`,
+      } as CSSProperties}/>
+      {arr(count).map((_, i) => {
+        const top = rand(5, 92, i + 211);
+        const dur = rand(5, 9, i + 217);
+        const delay = rand(0, 5, i + 223);
+        const len = rand(80, 220, i + 227);
+        const op = baseOp * rand(0.7, 1.1, i + 231);
+        const thick = severity >= 2 ? 1.6 : 1;
+        return (
+          <span key={i} style={{
+            position: "absolute", top: `${top}%`, left: 0,
+            width: `${len}px`, height: thick,
+            background: `linear-gradient(to right, transparent, hsl(${p.hue} ${p.sat}% ${p.light}% / ${op}), transparent)`,
+            filter: severity >= 2 ? "blur(0.5px)" : undefined,
+            animation: `fx-wind ${dur}s linear ${delay}s infinite`,
+          } as CSSProperties}/>
+        );
+      })}
+      {/* soft drifting puffs add depth at higher severities */}
+      {severity >= 1 && arr(3).map((_, i) => (
+        <div key={`b${i}`} style={{
+          position: "absolute", top: `${rand(10, 80, i + 251)}%`, left: 0,
+          width: "55%", height: "26%",
+          background: `radial-gradient(ellipse at center, hsl(${p.hue} ${p.sat}% ${p.light}% / ${0.08 + severity * 0.04}), transparent 70%)`,
+          filter: "blur(16px)",
+          animation: `fx-wind ${rand(8, 14, i + 257)}s linear ${rand(0, 6, i + 259)}s infinite`,
+        } as CSSProperties}/>
+      ))}
     </div>
   );
 }
