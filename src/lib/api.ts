@@ -104,38 +104,61 @@ export async function geocodePlace(query: string): Promise<GeoResult[]> {
 export const geocodeUK = geocodePlace;
 
 export async function reverseGeocode(lat: number, lon: number): Promise<GeoResult | null> {
-  // Try postcodes.io first (UK only, gives nice locality names)
-  const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lon}&lat=${lat}&limit=1&radius=2000`);
-  if (r.ok) {
-    const j = await r.json();
-    const d = j.result?.[0];
-    if (d) {
-      const ward = cleanName(d.admin_ward);
-      const parish = cleanParish(d.parish);
-      const district = cleanName(d.admin_district);
-      const path = [district, parish, ward].filter(Boolean) as string[];
+  // Primary: OpenStreetMap Nominatim — hyperlocal worldwide (road / neighbourhood / suburb).
+  // zoom=18 returns the smallest meaningful locality (down to road/building level).
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=en`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (r.ok) {
+      const j = await r.json();
+      const a = j.address ?? {};
+      const country = cleanName(a.country);
+      const state = cleanName(a.state || a.region);
+      const county = cleanName(a.county);
+      const city = cleanName(a.city || a.town || a.village || a.municipality || a.hamlet);
+      const cityDistrict = cleanName(a.city_district || a.borough || a.district);
+      const suburb = cleanName(a.suburb || a.quarter);
+      const neighbourhood = cleanName(a.neighbourhood || a.residential || a.allotments);
+      const road = cleanName(a.road || a.pedestrian || a.footway);
+      const path = [city || county, cityDistrict, suburb, neighbourhood, road].filter(Boolean) as string[];
+      const name =
+        road || neighbourhood || suburb || cityDistrict || city ||
+        cleanName(j.name) || county || state || "Current location";
+      // Try postcodes.io purely for the UK postcode string (not naming).
+      let postcode = a.postcode as string | undefined;
+      if (!postcode && a.country_code === "gb") {
+        try {
+          const p = await fetch(`https://api.postcodes.io/postcodes?lon=${lon}&lat=${lat}&limit=1&radius=1500`);
+          if (p.ok) postcode = (await p.json()).result?.[0]?.postcode;
+        } catch { /* ignore */ }
+      }
       return {
-        name: ward || parish || district || "Current location",
-        neighbourhood: parish,
-        district,
+        name,
+        neighbourhood: neighbourhood || suburb,
+        district: cityDistrict || county,
         localityPath: path,
-        region: d.region || d.country,
-        postcode: d.postcode,
-        country: "United Kingdom",
-        countryCode: "GB",
+        region: state || county,
+        postcode,
+        country,
+        countryCode: a.country_code ? String(a.country_code).toUpperCase() : undefined,
         latitude: lat,
         longitude: lon,
       };
     }
-  }
-  // Worldwide fallback via BigDataCloud (free, no key)
+  } catch { /* ignore, fall through */ }
+  // Fallback: BigDataCloud (coarser, but works without referer concerns)
   try {
     const r2 = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
     if (r2.ok) {
       const j = await r2.json();
+      const locality = j.locality || j.localityInfo?.administrative?.slice(-1)?.[0]?.name;
+      const path = [j.principalSubdivision, j.city, locality].filter(Boolean) as string[];
       return {
-        name: j.city || j.locality || j.principalSubdivision || "Current location",
+        name: locality || j.city || j.principalSubdivision || "Current location",
         region: j.principalSubdivision,
+        localityPath: path,
         country: j.countryName,
         countryCode: j.countryCode,
         latitude: lat,

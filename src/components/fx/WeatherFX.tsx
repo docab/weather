@@ -69,7 +69,7 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {/* tornado / whirlwind */}
       {isTornado && <Tornado />}
       {/* wind streaks */}
-      {isWindy && !isRain && !isSnow && !isDust && !isTornado && <Wind />}
+      {isWindy && !isRain && !isSnow && !isDust && !isTornado && <Wind speed={weather.windSpeed} gust={weather.windGust} />}
       {/* freezing-cold frost crystals overlay */}
       {isFrost && <Frost />}
       {/* lightning */}
@@ -446,23 +446,43 @@ export function Tornado() {
   );
 }
 
-export function Wind() {
+/**
+ * Wind streaks — count, length, opacity and speed scale with wind speed (mph).
+ * Calm <10 mph: a few faint wisps. Strong 30+ mph: dense, fast streaks. Storm 50+ mph: violent.
+ */
+export function Wind({ speed = 18, gust = 0 }: { speed?: number; gust?: number }) {
+  const v = Math.max(speed, gust * 0.6);            // factor in gusts a little
+  const f = Math.max(0.4, Math.min(3, v / 18));     // 0.4 → 3
+  const count = Math.round(6 + 10 * f);
+  const baseOp = Math.min(0.9, 0.35 + f * 0.2);
   return (
     <div className="fx-layer">
-      {arr(8).map((_, i) => {
-        const top = rand(10, 90, i + 31);
-        const dur = rand(2.4, 4.2, i + 37);
+      {arr(count).map((_, i) => {
+        const top = rand(2, 96, i + 31);
+        const dur = rand(2.6, 4.4, i + 37) / f;     // faster with stronger wind
         const delay = rand(0, 4, i + 41);
-        const len = rand(60, 160, i + 43);
+        const len = rand(60, 180, i + 43) * Math.min(1.6, f);
+        const op = baseOp * rand(0.6, 1, i + 47);
+        const thickness = f > 1.6 ? 1.6 : 1;
         return (
           <span key={i} style={{
             position: "absolute", top: `${top}%`, left: 0,
-            width: `${len}px`, height: 1,
-            background: "linear-gradient(to right, transparent, hsl(0 0% 100% / .6), transparent)",
+            width: `${len}px`, height: thickness,
+            background: `linear-gradient(to right, transparent, hsl(0 0% 100% / ${op}), transparent)`,
             animation: `fx-wind ${dur}s linear ${delay}s infinite`,
           } as CSSProperties} />
         );
       })}
+      {/* swirling gust eddies for very strong wind */}
+      {f > 1.8 && arr(3).map((_, i) => (
+        <div key={`g${i}`} style={{
+          position: "absolute", top: `${rand(15, 75, i + 71)}%`, left: 0,
+          width: "55%", height: "30%",
+          background: "radial-gradient(ellipse at center, hsl(0 0% 100% / .12), transparent 70%)",
+          filter: "blur(14px)",
+          animation: `fx-wind ${rand(3.5, 5.5, i + 73) / f}s linear ${rand(0, 3, i + 75)}s infinite`,
+        } as CSSProperties} />
+      ))}
     </div>
   );
 }
