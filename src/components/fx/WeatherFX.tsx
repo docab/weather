@@ -27,7 +27,7 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isSnow    = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const isRain    = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
   const isFog     = code === 45 || code === 48;
-  const isWindy   = weather.windSpeed >= 18;
+  const isWindy   = weather.windSpeed >= 8;     // even a gentle breeze shows a couple of wisps
   const cloud     = weather.cloudCover;
   const visKm     = weather.visibility ? weather.visibility / 1000 : 99;
   const isMist    = !isFog && !isRain && !isSnow && weather.humidity >= 92;
