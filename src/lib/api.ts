@@ -374,6 +374,9 @@ export function makeLocation(g: GeoResult, opts: { id?: string; isAutoDetected?:
     countryCode: g.countryCode,
     latitude: g.latitude,
     longitude: g.longitude,
+    neighbourhood: g.neighbourhood,
+    district: g.district,
+    localityPath: g.localityPath,
     isAutoDetected: opts.isAutoDetected,
   };
 }
