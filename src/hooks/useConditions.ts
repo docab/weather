@@ -28,6 +28,8 @@ export function useConditionsForLocations(locations: Location[]) {
       queryFn: () => fetchConditions(loc),
       staleTime: 1000 * 60 * 15,
       refetchOnWindowFocus: false,
+      retry: 4,
+      retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 15000),
     })),
   });
 }

@@ -215,7 +215,7 @@ const Index = () => {
               {activeQuery?.isLoading && <LocationViewSkeleton />}
               {activeQuery?.isError && (
                 <div className="glass-card border-destructive/40 bg-destructive/10 p-5 text-sm text-destructive">
-                  Couldn't load conditions. Try again in a moment.
+                  Weather service is temporarily unavailable (Open‑Meteo upstream error). Retrying automatically — please hang tight.
                 </div>
               )}
               {activeQuery?.data && <LocationView conditions={activeQuery.data} />}
