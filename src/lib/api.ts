@@ -81,13 +81,54 @@ export async function geocodePlace(query: string): Promise<GeoResult[]> {
     }
   }
 
-  // Worldwide place-name search via Open-Meteo geocoding
+  // Primary: Nominatim — returns hyperlocal matches worldwide
+  // (neighbourhoods, suburbs, roads, blocks) in addition to cities.
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&addressdetails=1&limit=10&accept-language=en`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (r.ok) {
+      const arr = await r.json() as Array<{
+        lat: string; lon: string; display_name: string; name?: string;
+        address?: Record<string, string>; type?: string; class?: string;
+      }>;
+      const mapped: GeoResult[] = arr.map(d => {
+        const a = d.address ?? {};
+        const country = cleanName(a.country);
+        const state = cleanName(a.state || a.region);
+        const county = cleanName(a.county);
+        const city = cleanName(a.city || a.town || a.village || a.municipality || a.hamlet);
+        const cityDistrict = cleanName(a.city_district || a.borough || a.district);
+        const suburb = cleanName(a.suburb || a.quarter);
+        const neighbourhood = cleanName(a.neighbourhood || a.residential || a.allotments);
+        const road = cleanName(a.road || a.pedestrian || a.footway);
+        const primary = cleanName(d.name) || neighbourhood || suburb || road || cityDistrict || city || county || state || d.display_name.split(",")[0];
+        const path = [city || county, cityDistrict, suburb, neighbourhood, road].filter(Boolean) as string[];
+        return {
+          name: primary!,
+          neighbourhood: neighbourhood || suburb,
+          district: cityDistrict || county,
+          localityPath: path,
+          region: state || county,
+          postcode: a.postcode,
+          country,
+          countryCode: a.country_code ? String(a.country_code).toUpperCase() : undefined,
+          latitude: parseFloat(d.lat),
+          longitude: parseFloat(d.lon),
+        };
+      });
+      if (mapped.length) return mapped;
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: Open-Meteo geocoding (city/town level only)
   const r = await fetch(
     `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`
   );
   if (!r.ok) return [];
   const j = await r.json();
-  const results: GeoResult[] = (j.results || [])
+  return (j.results || [])
     .slice(0, 10)
     .map((d: { name: string; admin1?: string; admin2?: string; country?: string; country_code?: string; latitude: number; longitude: number }) => ({
       name: d.name,
@@ -97,7 +138,6 @@ export async function geocodePlace(query: string): Promise<GeoResult[]> {
       latitude: d.latitude,
       longitude: d.longitude,
     }));
-  return results;
 }
 
 // Backwards-compat alias
