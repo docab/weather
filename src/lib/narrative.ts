@@ -77,10 +77,19 @@ export function buildNarrative(
   let tempPhrase = pick(tempPool, seed);
 
   let skyPhrase = "";
-  if (info.sky === "clear") {
+  // WMO code 0 = totally clear; code 1 = "mainly clear" (a few high clouds).
+  // Treating them identically led to "not a cloud in sight" while the icon
+  // showed sun-with-cloud. Split the copy so wording matches the sky.
+  const trulyClear = weather.weatherCode === 0;
+  const mainlyClear = weather.weatherCode === 1;
+  if (info.sky === "clear" && trulyClear) {
     skyPhrase = weather.isDay
       ? " " + pick(["Bright, clear sky.", "Sun's out, not a cloud in sight.", "Big blue sky overhead."], seed, 1)
       : " " + pick(["Clear night sky.", "Stars out, sky's clear.", "Crisp clear night."], seed, 1);
+  } else if (info.sky === "clear" && mainlyClear) {
+    skyPhrase = weather.isDay
+      ? " " + pick(["Mostly sunny with the odd wisp of cloud.", "Plenty of sun, a stray cloud here and there.", "Bright with a few thin clouds drifting through."], seed, 1)
+      : " " + pick(["Mostly clear night, just a few high clouds.", "Stars peeking through the odd thin cloud.", "Largely clear overhead, a wisp or two of cloud."], seed, 1);
   } else if (info.sky === "cloudy" && weather.precipProb < 30) {
     skyPhrase = " " + pick([
       "Grey lid of cloud, but it should stay dry.",
