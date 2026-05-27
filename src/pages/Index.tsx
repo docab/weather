@@ -116,7 +116,13 @@ const Index = () => {
   const meteorActive = activeShowers(new Date()).some(s => s.isPeakingNow);
   const skyInfo = activeWeather ? describeWeather(activeWeather.weatherCode, activeWeather.isDay) : null;
   const pageBgStyle = activeWeather && skyInfo
-    ? dynamicSkyStyle(skyInfo.sky, activeWeather.feelsLike)
+    ? dynamicSkyStyle(skyInfo.sky, activeWeather.feelsLike, {
+        windSpeed: activeWeather.windSpeed,
+        humidity: activeWeather.humidity,
+        cloudCover: activeWeather.cloudCover,
+        uvIndex: activeWeather.uvIndex,
+        isDay: activeWeather.isDay,
+      })
     : { background: "hsl(var(--background))" };
 
   return (

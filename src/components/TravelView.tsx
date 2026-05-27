@@ -154,7 +154,13 @@ function RouteHeader({ origin, destination }: { origin: LocationConditions; dest
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-border p-5 shadow-card"
-      style={dynamicSkyStyle(info.sky, (destination ?? origin).weather.feelsLike)}
+      style={(() => {
+        const w = (destination ?? origin).weather;
+        return dynamicSkyStyle(info.sky, w.feelsLike, {
+          windSpeed: w.windSpeed, humidity: w.humidity,
+          cloudCover: w.cloudCover, uvIndex: w.uvIndex, isDay: w.isDay,
+        });
+      })()}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/40 via-transparent to-transparent" />
       <div className="relative flex items-center gap-3 text-sm">

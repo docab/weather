@@ -72,7 +72,10 @@ function BriefingRow({
     <button
       onClick={onClick}
       className="group relative w-full overflow-hidden rounded-2xl border border-border p-4 text-left shadow-card transition-transform hover:-translate-y-0.5"
-      style={dynamicSkyStyle(info.sky, weather.feelsLike)}
+      style={dynamicSkyStyle(info.sky, weather.feelsLike, {
+        windSpeed: weather.windSpeed, humidity: weather.humidity,
+        cloudCover: weather.cloudCover, uvIndex: weather.uvIndex, isDay: weather.isDay,
+      })}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/40 via-transparent to-transparent" />
       <div className="relative flex items-center gap-4">
