@@ -13,7 +13,13 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   return (
     <div
       className="glass-card relative overflow-hidden p-6"
-      style={dynamicSkyStyle(info.sky, weather.feelsLike)}
+      style={dynamicSkyStyle(info.sky, weather.feelsLike, {
+        windSpeed: weather.windSpeed,
+        humidity: weather.humidity,
+        cloudCover: weather.cloudCover,
+        uvIndex: weather.uvIndex,
+        isDay: weather.isDay,
+      })}
     >
       <WeatherFX weather={weather} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/40" />
