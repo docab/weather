@@ -64,35 +64,57 @@ export function dynamicSkyStyle(
   sky: WeatherInfo["sky"],
   feelsLike: number
 ): React.CSSProperties {
-  // Pick a hue based on temperature: cold -> blue, mild -> teal, warm -> amber/orange
-  const warm = feelsLike >= 22;
-  const mild = feelsLike >= 12 && feelsLike < 22;
-  const cold = feelsLike < 6;
+  // Temperature-first palette. The "feels like" reading drives the hue so a
+  // pleasant 18° sunny day never looks like a 35° scorcher. Sky condition only
+  // nudges saturation/lightness and overlays (clouds desaturate, rain cools,
+  // snow lightens, night darkens).
+  //
+  // Bands (°C feels-like):
+  //   < -5  arctic        — icy white-blue
+  //   -5–4  frosty        — pale steel blue
+  //   4–10  cool          — deep ocean blue
+  //   10–16 mild          — teal / sea-green
+  //   16–22 pleasant      — soft warm green / honey
+  //   22–28 warm          — amber
+  //   28–34 hot           — deep orange
+  //   > 34  scorching     — molten red
+  type Band = { h: number; s: number; lFrom: number; lTo: number };
+  const bandFor = (t: number): Band => {
+    if (t < -5)  return { h: 200, s: 40, lFrom: 32, lTo: 46 }; // arctic
+    if (t < 4)   return { h: 210, s: 45, lFrom: 24, lTo: 36 }; // frosty
+    if (t < 10)  return { h: 215, s: 60, lFrom: 16, lTo: 28 }; // cool
+    if (t < 16)  return { h: 185, s: 50, lFrom: 16, lTo: 26 }; // mild
+    if (t < 22)  return { h: 150, s: 38, lFrom: 16, lTo: 26 }; // pleasant
+    if (t < 28)  return { h: 35,  s: 70, lFrom: 18, lTo: 30 }; // warm
+    if (t < 34)  return { h: 18,  s: 78, lFrom: 18, lTo: 32 }; // hot
+    return        { h: 6,   s: 85, lFrom: 20, lTo: 36 };       // scorching
+  };
 
-  let from = "hsl(220 40% 14%)";
-  let to   = "hsl(215 30% 22%)";
+  let b = bandFor(feelsLike);
 
+  // Sky modifiers — preserve hue, modulate saturation / lightness.
   switch (sky) {
-    case "clear":
-      if (warm)      { from = "hsl(28 75% 18%)";  to = "hsl(14 80% 30%)"; }
-      else if (mild) { from = "hsl(205 65% 16%)"; to = "hsl(190 55% 26%)"; }
-      else if (cold) { from = "hsl(220 70% 12%)"; to = "hsl(210 60% 22%)"; }
-      else           { from = "hsl(215 60% 14%)"; to = "hsl(200 55% 24%)"; }
-      break;
     case "cloudy":
-      from = "hsl(215 18% 18%)"; to = "hsl(220 14% 26%)";
+      b = { ...b, s: Math.max(14, b.s - 35), lFrom: b.lFrom + 2, lTo: b.lTo + 2 };
       break;
     case "rain":
-      from = "hsl(210 38% 14%)"; to = "hsl(218 28% 24%)";
+      // Drag toward cool blue and desaturate.
+      b = { h: Math.round((b.h * 0.4) + (212 * 0.6)), s: Math.max(22, b.s - 20), lFrom: b.lFrom - 2, lTo: b.lTo };
       break;
     case "snow":
-      from = "hsl(208 30% 24%)"; to = "hsl(218 22% 34%)";
+      b = { h: 210, s: 25, lFrom: 26, lTo: 38 };
       break;
     case "night":
-      from = "hsl(232 50% 8%)";  to = "hsl(240 40% 16%)";
+      // Night always darkens and pulls toward indigo, but keeps a whisper of
+      // the temperature hue so a hot night still feels warmer than a cold one.
+      b = { h: Math.round((b.h * 0.25) + (232 * 0.75)), s: Math.max(28, b.s - 20), lFrom: 8, lTo: 16 };
+      break;
+    case "clear":
+    default:
       break;
   }
-  return {
-    background: `linear-gradient(160deg, ${from} 0%, ${to} 100%)`,
-  };
+
+  const from = `hsl(${b.h} ${b.s}% ${b.lFrom}%)`;
+  const to   = `hsl(${b.h} ${Math.max(20, b.s - 10)}% ${b.lTo}%)`;
+  return { background: `linear-gradient(160deg, ${from} 0%, ${to} 100%)` };
 }
