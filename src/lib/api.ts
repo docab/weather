@@ -259,7 +259,20 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     });
   }
 
-  const info = describeWeather(c.weather_code, !!c.is_day);
+  // Reconcile current vs. current-hour: if the live "current" code disagrees
+  // with the hourly forecast for *this* hour (e.g. API says "cloudy" but the
+  // hour is meant to be raining at 98%), trust whichever is wetter so the
+  // hero matches the hourly strip and the animations actually fire when it's
+  // raining outside.
+  const currentHourCode = hourly.weather_code[startIdx] ?? c.weather_code;
+  const currentHourProb = hourly.precipitation_probability[startIdx] ?? 0;
+  const isWetCode = (code: number) =>
+    (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
+  const reconciledCode =
+    !isWetCode(c.weather_code) && (isWetCode(currentHourCode) || currentHourProb >= 70)
+      ? currentHourCode
+      : c.weather_code;
+  const info = describeWeather(reconciledCode, !!c.is_day);
 
   const days: WeatherDay[] = [];
   for (let i = 0; i < d.time.length; i++) {
@@ -282,13 +295,15 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     feelsLike: c.apparent_temperature,
     high: d.temperature_2m_max[0],
     low: d.temperature_2m_min[0],
-    precipProb: d.precipitation_probability_max[0] ?? 0,
+    // Show the chance of rain *right now*, not the daily maximum — that's what
+    // matches the hourly strip and the user's actual experience outside.
+    precipProb: currentHourProb,
     rainTotal: d.precipitation_sum[0] ?? 0,
     windSpeed: c.wind_speed_10m,
     windGust: c.wind_gusts_10m,
     uvIndex: d.uv_index_max[0] ?? 0,
     humidity: c.relative_humidity_2m,
-    weatherCode: c.weather_code,
+    weatherCode: reconciledCode,
     conditions: info.label,
     isDay: !!c.is_day,
     cloudCover: c.cloud_cover ?? 0,
