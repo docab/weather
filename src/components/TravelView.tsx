@@ -1,8 +1,11 @@
 import { useState, useMemo } from "react";
-import type { LocationConditions, Location } from "@/lib/types";
+import type { LocationConditions, Location, WeatherHour } from "@/lib/types";
 import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { severityRank } from "@/lib/severity";
-import { Plane, Calendar, Loader2, MapPin, Locate, Train, Backpack, Sparkles, Route } from "lucide-react";
+import {
+  Plane, Calendar, Loader2, MapPin, Locate, Train, Backpack, Route,
+  Clock, Navigation, Luggage,
+} from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 interface Props {
@@ -80,17 +83,11 @@ export function TravelView({ locations, queries }: Props) {
         <div className="glass-card p-5 text-sm text-muted-foreground">Pick a destination above.</div>
       ) : (
         <>
-          {/* Weather expectations on arrival */}
-          <SectionCard icon={<Sparkles className="h-3.5 w-3.5 text-primary" />} title="What you'll find on arrival">
-            <p className="text-sm leading-relaxed text-foreground/95">
-              {weatherStory(destination)}
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-              <MiniStat label="Feels" value={`${Math.round(destination.weather.feelsLike)}°`} />
-              <MiniStat label="Rain" value={`${Math.round(destination.weather.precipProb)}%`} />
-              <MiniStat label="Wind" value={`${Math.round(destination.weather.windSpeed)}mph`} />
-            </div>
-          </SectionCard>
+          {/* The journey itself — distance, mode, ETA, en-route weather */}
+          <JourneyCard origin={origin} destination={destination} />
+
+          {/* Destination weather AT YOUR ARRIVAL TIME (not "now") */}
+          <ArrivalCard origin={origin} destination={destination} />
 
           {/* 7-day window — best day to go */}
           <SectionCard icon={<Calendar className="h-3.5 w-3.5 text-primary" />} title="Best day in the next week">
@@ -100,7 +97,7 @@ export function TravelView({ locations, queries }: Props) {
           </SectionCard>
 
           {/* Packing */}
-          <SectionCard icon={<Backpack className="h-3.5 w-3.5 text-primary" />} title="What to pack">
+          <SectionCard icon={<Backpack className="h-3.5 w-3.5 text-primary" />} title="Pack for the journey">
             <ul className="space-y-1.5 text-sm text-foreground/90">
               {packingList(origin, destination).map((line, i) => (
                 <li key={i} className="flex items-start gap-2">
@@ -111,28 +108,10 @@ export function TravelView({ locations, queries }: Props) {
             </ul>
           </SectionCard>
 
-          {/* Route — generic distance + suggestions for travelling there */}
-          <SectionCard icon={<Route className="h-3.5 w-3.5 text-primary" />} title="Getting there">
-            <p className="text-sm leading-relaxed text-foreground/95">{routeStory(origin, destination)}</p>
-            <div className="mt-3 space-y-2">
-              {transportOptions(origin, destination).map(o => (
-                <div key={o.mode} className="flex items-start gap-3 rounded-xl bg-secondary/40 p-3">
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background/60 text-primary">
-                    {o.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-foreground/90">{o.mode}</div>
-                    <div className="text-xs text-foreground/80">{o.detail}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          {/* Things to do */}
-          <SectionCard icon={<Plane className="h-3.5 w-3.5 text-primary" />} title="Things to do once you're there">
+          {/* Carry-on essentials */}
+          <SectionCard icon={<Luggage className="h-3.5 w-3.5 text-primary" />} title="Take with you on the day">
             <ul className="space-y-1.5 text-sm text-foreground/90">
-              {thingsToDo(destination).map((line, i) => (
+              {takeWithYou(origin, destination).map((line, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-primary" />
                   <span>{line}</span>
