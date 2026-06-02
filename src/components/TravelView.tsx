@@ -174,15 +174,6 @@ function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: 
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-secondary/40 p-2 text-center">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm font-bold tabular">{value}</div>
-    </div>
-  );
-}
-
 function displayName(l: Location): string { return l.customName || l.name; }
 
 // ----- Journey logic -----
