@@ -86,32 +86,35 @@ export function dynamicSkyStyle(
   // 24 reference stops covering −10°C → 44°C in 2° steps. Each stop is a
   // {hue, saturation, lightness range}. Values between stops are linearly
   // interpolated so the palette flows smoothly rather than jumping at bands.
+  // Sky-only palette: NO greens, NO teals. Only hues that actually appear in
+  // the sky — icy white-blues, steel blues, deep night blues, slate greys,
+  // pale cream, butter yellow, amber, sunset orange, then molten red.
   type Stop = { t: number; h: number; s: number; lFrom: number; lTo: number };
   const stops: Stop[] = [
-    { t: -10, h: 195, s: 30, lFrom: 38, lTo: 52 }, // glacial white-blue
-    { t:  -8, h: 198, s: 34, lFrom: 36, lTo: 50 },
-    { t:  -6, h: 202, s: 38, lFrom: 33, lTo: 47 }, // arctic
-    { t:  -4, h: 206, s: 42, lFrom: 30, lTo: 44 },
-    { t:  -2, h: 210, s: 45, lFrom: 27, lTo: 40 }, // frosty
-    { t:   0, h: 212, s: 48, lFrom: 24, lTo: 37 },
-    { t:   2, h: 214, s: 52, lFrom: 22, lTo: 34 }, // freezing edge
-    { t:   4, h: 215, s: 56, lFrom: 20, lTo: 32 },
-    { t:   6, h: 216, s: 60, lFrom: 18, lTo: 30 }, // cool deep blue
-    { t:   8, h: 210, s: 58, lFrom: 17, lTo: 29 },
-    { t:  10, h: 200, s: 54, lFrom: 17, lTo: 28 }, // cool→mild transition
-    { t:  12, h: 190, s: 50, lFrom: 17, lTo: 27 },
-    { t:  14, h: 180, s: 46, lFrom: 17, lTo: 26 }, // mild teal
-    { t:  16, h: 168, s: 42, lFrom: 17, lTo: 26 },
-    { t:  18, h: 150, s: 38, lFrom: 17, lTo: 26 }, // pleasant sea-green
-    { t:  20, h: 120, s: 36, lFrom: 18, lTo: 27 },
-    { t:  22, h:  85, s: 42, lFrom: 19, lTo: 28 }, // soft warm green
-    { t:  24, h:  55, s: 52, lFrom: 19, lTo: 29 }, // honey
-    { t:  26, h:  42, s: 62, lFrom: 19, lTo: 30 }, // warm amber
-    { t:  28, h:  32, s: 70, lFrom: 19, lTo: 31 },
-    { t:  30, h:  24, s: 75, lFrom: 19, lTo: 32 }, // hot orange
-    { t:  34, h:  16, s: 80, lFrom: 20, lTo: 33 },
-    { t:  38, h:  10, s: 84, lFrom: 21, lTo: 35 }, // scorching
-    { t:  44, h:   4, s: 88, lFrom: 22, lTo: 38 }, // furnace red
+    { t: -10, h: 205, s: 22, lFrom: 60, lTo: 78 }, // glacial pale white-blue
+    { t:  -8, h: 208, s: 26, lFrom: 55, lTo: 74 },
+    { t:  -6, h: 210, s: 32, lFrom: 48, lTo: 68 }, // arctic
+    { t:  -4, h: 212, s: 38, lFrom: 42, lTo: 62 },
+    { t:  -2, h: 214, s: 44, lFrom: 36, lTo: 55 }, // frosty steel
+    { t:   0, h: 216, s: 50, lFrom: 30, lTo: 48 },
+    { t:   2, h: 218, s: 54, lFrom: 26, lTo: 42 },
+    { t:   4, h: 218, s: 58, lFrom: 22, lTo: 38 },
+    { t:   6, h: 218, s: 60, lFrom: 20, lTo: 35 }, // cool deep blue
+    { t:   8, h: 216, s: 58, lFrom: 22, lTo: 38 },
+    { t:  10, h: 214, s: 55, lFrom: 26, lTo: 44 },
+    { t:  12, h: 212, s: 50, lFrom: 32, lTo: 50 }, // crisp sky blue
+    { t:  14, h: 210, s: 46, lFrom: 38, lTo: 56 },
+    { t:  16, h: 208, s: 42, lFrom: 44, lTo: 62 }, // pleasant pale blue
+    { t:  18, h: 205, s: 36, lFrom: 50, lTo: 68 },
+    { t:  20, h:  48, s: 28, lFrom: 62, lTo: 78 }, // soft cream (warm white)
+    { t:  22, h:  46, s: 42, lFrom: 60, lTo: 76 }, // pale butter
+    { t:  24, h:  44, s: 56, lFrom: 56, lTo: 72 }, // butter yellow
+    { t:  26, h:  40, s: 68, lFrom: 52, lTo: 68 }, // honey
+    { t:  28, h:  34, s: 76, lFrom: 48, lTo: 64 }, // warm amber
+    { t:  30, h:  26, s: 82, lFrom: 44, lTo: 60 }, // hot orange
+    { t:  34, h:  18, s: 86, lFrom: 38, lTo: 54 }, // deep orange
+    { t:  38, h:  10, s: 88, lFrom: 32, lTo: 48 }, // scorching red-orange
+    { t:  44, h:   2, s: 90, lFrom: 26, lTo: 42 }, // molten red
   ];
 
   const interp = (t: number): { h: number; s: number; lFrom: number; lTo: number } => {
@@ -165,14 +168,10 @@ export function dynamicSkyStyle(
     }
   }
 
-  // --- Modifier 3: humidity.
-  // Warm + humid → muggier, deeper amber (shift hue slightly toward 30,
-  // bump saturation, drop lightness — feels heavy).
-  // Cold + humid → bluer, damper (shift toward 205, drop lightness).
   if (hum >= 65) {
     const humK = Math.min(1, (hum - 65) / 30);
     if (feelsLike >= 22) {
-      let dh = 30 - b.h;
+      let dh = 24 - b.h;
       if (dh > 180) dh -= 360;
       if (dh < -180) dh += 360;
       b.h = (b.h + dh * humK * 0.25 + 360) % 360;
@@ -186,6 +185,13 @@ export function dynamicSkyStyle(
       b.h = (b.h + dh * humK * 0.3 + 360) % 360;
       b.lFrom = Math.max(10, b.lFrom - humK * 2);
     }
+  }
+
+  // Safety rail: snap any stray green/teal hue (60–200) onto the nearest
+  // sky-realistic band — pull toward blue if it was cool, toward amber if warm.
+  if (b.h > 60 && b.h < 200) {
+    b.h = feelsLike >= 19 ? 44 : 210;
+    b.s = Math.max(b.s, 35);
   }
 
   // --- Modifier 4: UV / sun intensity. Bright clear days pop harder.

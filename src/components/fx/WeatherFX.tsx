@@ -25,7 +25,10 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isThunder = code >= 95;
   const isHail    = code === 96 || code === 99;
   const isSnow    = (code >= 71 && code <= 77) || code === 85 || code === 86;
-  const isRain    = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
+  const codeIsRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
+  // Fall-back: if the current hour is very likely wet, render rain even if
+  // the WMO code hasn't caught up yet. Stops the "100% rain but no drops" bug.
+  const isRain    = codeIsRain || (!isSnow && weather.precipProb >= 70);
   const isFog     = code === 45 || code === 48;
   const isWindy   = weather.windSpeed >= 8;     // even a gentle breeze shows a couple of wisps
   const cloud     = weather.cloudCover;
@@ -59,7 +62,7 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {/* smoke — wildfire / industrial smoke */}
       {isSmoke && <Smoke intensity={intensity} />}
       {/* rain */}
-      {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder} intensity={intensity} />}
+      {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder || weather.precipProb >= 85} intensity={Math.max(intensity, 1.4)} />}
       {/* hail */}
       {isHail && <Hail />}
       {/* snow */}
@@ -82,21 +85,23 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
  * Individual effect layers
  * ---------------------------------------------------------------------*/
 export function Rain({ heavy, intensity = 1 }: { heavy?: boolean; intensity?: number }) {
-  const drops = Math.round((heavy ? 70 : 40) * intensity);
+  const drops = Math.round((heavy ? 140 : 90) * intensity);
   return (
     <div className="fx-layer">
       {arr(drops).map((_, i) => {
         const left = rand(0, 100, i + 1);
-        const dur = rand(0.45, 0.9, i + 7);
+        const dur = rand(0.35, 0.7, i + 7);
         const delay = rand(0, 1.5, i + 13);
-        const len = rand(8, heavy ? 22 : 16, i + 19);
-        const op = rand(0.25, 0.6, i + 23);
+        const len = rand(14, heavy ? 36 : 26, i + 19);
+        const op = rand(0.55, 0.95, i + 23);
+        const thick = heavy ? 1.6 : 1.2;
         return (
           <span key={i} style={{
             position: "absolute",
             top: 0, left: `${left}%`,
-            width: 1, height: `${len}px`,
-            background: `linear-gradient(to bottom, transparent, hsl(200 70% 80% / ${op}))`,
+            width: thick, height: `${len}px`,
+            background: `linear-gradient(to bottom, transparent, hsl(205 90% 88% / ${op}))`,
+            boxShadow: `0 0 4px hsl(205 90% 90% / ${op * 0.6})`,
             animation: `fx-rain ${dur}s linear ${delay}s infinite`,
           } as CSSProperties} />
         );
@@ -106,20 +111,20 @@ export function Rain({ heavy, intensity = 1 }: { heavy?: boolean; intensity?: nu
 }
 
 export function Snow({ heavy }: { heavy?: boolean }) {
-  const flakes = heavy ? 50 : 30;
+  const flakes = heavy ? 110 : 70;
   return (
     <div className="fx-layer">
       {arr(flakes).map((_, i) => {
         const left = rand(0, 100, i + 2);
-        const size = rand(2, heavy ? 6 : 4, i + 11);
+        const size = rand(3, heavy ? 9 : 6, i + 11);
         const dur = rand(6, 14, i + 17);
         const delay = rand(0, 8, i + 19);
         return (
           <span key={i} style={{
             position: "absolute", top: "-5%", left: `${left}%`,
             width: size, height: size, borderRadius: "50%",
-            background: "hsl(210 40% 96% / .85)",
-            boxShadow: "0 0 6px hsl(210 40% 96% / .5)",
+            background: "hsl(210 40% 98% / .98)",
+            boxShadow: "0 0 10px hsl(210 60% 98% / .85)",
             animation: `fx-snow ${dur}s linear ${delay}s infinite`,
           } as CSSProperties} />
         );
@@ -453,8 +458,8 @@ export function Tornado() {
 export function Wind({ speed = 18, gust = 0 }: { speed?: number; gust?: number }) {
   const v = Math.max(speed, gust * 0.6);            // factor in gusts a little
   const f = Math.max(0.4, Math.min(3, v / 18));     // 0.4 → 3
-  const count = Math.round(6 + 10 * f);
-  const baseOp = Math.min(0.9, 0.35 + f * 0.2);
+  const count = Math.round(14 + 16 * f);
+  const baseOp = Math.min(0.95, 0.55 + f * 0.18);
   return (
     <div className="fx-layer">
       {arr(count).map((_, i) => {
@@ -463,7 +468,7 @@ export function Wind({ speed = 18, gust = 0 }: { speed?: number; gust?: number }
         const delay = rand(0, 4, i + 41);
         const len = rand(60, 180, i + 43) * Math.min(1.6, f);
         const op = baseOp * rand(0.6, 1, i + 47);
-        const thickness = f > 1.6 ? 1.6 : 1;
+        const thickness = f > 1.6 ? 2.2 : 1.5;
         return (
           <span key={i} style={{
             position: "absolute", top: `${top}%`, left: 0,

@@ -1,8 +1,11 @@
 import { useState, useMemo } from "react";
-import type { LocationConditions, Location } from "@/lib/types";
+import type { LocationConditions, Location, WeatherHour } from "@/lib/types";
 import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { severityRank } from "@/lib/severity";
-import { Plane, Calendar, Loader2, MapPin, Locate, Train, Backpack, Sparkles, Route } from "lucide-react";
+import {
+  Plane, Calendar, Loader2, MapPin, Locate, Train, Backpack, Route,
+  Clock, Navigation, Luggage,
+} from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 interface Props {
@@ -80,17 +83,11 @@ export function TravelView({ locations, queries }: Props) {
         <div className="glass-card p-5 text-sm text-muted-foreground">Pick a destination above.</div>
       ) : (
         <>
-          {/* Weather expectations on arrival */}
-          <SectionCard icon={<Sparkles className="h-3.5 w-3.5 text-primary" />} title="What you'll find on arrival">
-            <p className="text-sm leading-relaxed text-foreground/95">
-              {weatherStory(destination)}
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-              <MiniStat label="Feels" value={`${Math.round(destination.weather.feelsLike)}°`} />
-              <MiniStat label="Rain" value={`${Math.round(destination.weather.precipProb)}%`} />
-              <MiniStat label="Wind" value={`${Math.round(destination.weather.windSpeed)}mph`} />
-            </div>
-          </SectionCard>
+          {/* The journey itself — distance, mode, ETA, en-route weather */}
+          <JourneyCard origin={origin} destination={destination} />
+
+          {/* Destination weather AT YOUR ARRIVAL TIME (not "now") */}
+          <ArrivalCard origin={origin} destination={destination} />
 
           {/* 7-day window — best day to go */}
           <SectionCard icon={<Calendar className="h-3.5 w-3.5 text-primary" />} title="Best day in the next week">
@@ -100,7 +97,7 @@ export function TravelView({ locations, queries }: Props) {
           </SectionCard>
 
           {/* Packing */}
-          <SectionCard icon={<Backpack className="h-3.5 w-3.5 text-primary" />} title="What to pack">
+          <SectionCard icon={<Backpack className="h-3.5 w-3.5 text-primary" />} title="Pack for the journey">
             <ul className="space-y-1.5 text-sm text-foreground/90">
               {packingList(origin, destination).map((line, i) => (
                 <li key={i} className="flex items-start gap-2">
@@ -111,28 +108,10 @@ export function TravelView({ locations, queries }: Props) {
             </ul>
           </SectionCard>
 
-          {/* Route — generic distance + suggestions for travelling there */}
-          <SectionCard icon={<Route className="h-3.5 w-3.5 text-primary" />} title="Getting there">
-            <p className="text-sm leading-relaxed text-foreground/95">{routeStory(origin, destination)}</p>
-            <div className="mt-3 space-y-2">
-              {transportOptions(origin, destination).map(o => (
-                <div key={o.mode} className="flex items-start gap-3 rounded-xl bg-secondary/40 p-3">
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background/60 text-primary">
-                    {o.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-foreground/90">{o.mode}</div>
-                    <div className="text-xs text-foreground/80">{o.detail}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          {/* Things to do */}
-          <SectionCard icon={<Plane className="h-3.5 w-3.5 text-primary" />} title="Things to do once you're there">
+          {/* Carry-on essentials */}
+          <SectionCard icon={<Luggage className="h-3.5 w-3.5 text-primary" />} title="Take with you on the day">
             <ul className="space-y-1.5 text-sm text-foreground/90">
-              {thingsToDo(destination).map((line, i) => (
+              {takeWithYou(origin, destination).map((line, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-primary" />
                   <span>{line}</span>
@@ -195,34 +174,242 @@ function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: 
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function displayName(l: Location): string { return l.customName || l.name; }
+
+// ----- Journey logic -----
+
+/** Pick a sensible default mode + travel time for a given distance + countries. */
+function pickMode(origin: Location, destination: Location):
+  { mode: "walk" | "drive" | "train" | "flight"; hours: number; label: string; icon: React.ReactNode; note: string } {
+  const km = haversineKm(origin, destination);
+  const sameCountry = origin.countryCode && origin.countryCode === destination.countryCode;
+  if (km < 3) {
+    return { mode: "walk", hours: km / 5, label: "Walk / cycle", icon: <Navigation className="h-4 w-4" />,
+      note: "Practically next door — on foot or by bike." };
+  }
+  if (km < 60) {
+    return { mode: "drive", hours: km / 50, label: "Local drive or train", icon: <Route className="h-4 w-4" />,
+      note: "Short hop — local train, metro or a quick drive." };
+  }
+  if (km < 350 && sameCountry) {
+    return { mode: "train", hours: km / 90 + 0.5, label: "Train or drive", icon: <Train className="h-4 w-4" />,
+      note: "Intercity train usually beats driving once you add traffic." };
+  }
+  if (km < 900 && sameCountry) {
+    return { mode: "drive", hours: km / 85 + 1, label: "Long drive or rail", icon: <Route className="h-4 w-4" />,
+      note: "Half-day drive — break it up, or take a high-speed train if there is one." };
+  }
+  // Anything else → flight, +2.5h airport overhead
+  return { mode: "flight", hours: km / 800 + 2.5, label: "Flight", icon: <Plane className="h-4 w-4" />,
+    note: "Flying is the realistic option — add ~2 h for check-in, security and transfers." };
+}
+
+function formatHours(h: number): string {
+  if (h < 1) return `${Math.max(5, Math.round(h * 60))} min`;
+  if (h < 10) {
+    const hr = Math.floor(h);
+    const mn = Math.round((h - hr) * 60);
+    return mn ? `${hr} h ${mn} min` : `${hr} h`;
+  }
+  return `${Math.round(h)} h`;
+}
+
+/** Local clock string for a weather timezone. */
+function localTime(tz: string, date: Date): string {
+  try {
+    return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+  } catch {
+    return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+}
+
+/** Find the hour closest to `hoursAhead` from now in a WeatherHour[]. */
+function hourAtOffset(hours: WeatherHour[], hoursAhead: number): WeatherHour | undefined {
+  if (!hours.length) return undefined;
+  const target = Date.now() + hoursAhead * 3600 * 1000;
+  let best = hours[0];
+  let bestDelta = Math.abs(new Date(best.time).getTime() - target);
+  for (const h of hours) {
+    const d = Math.abs(new Date(h.time).getTime() - target);
+    if (d < bestDelta) { best = h; bestDelta = d; }
+  }
+  return best;
+}
+
+/** Slice of hours covering the trip duration at the origin (for "en route" view). */
+function enRouteHours(hours: WeatherHour[], travelHours: number): WeatherHour[] {
+  const span = Math.max(1, Math.min(hours.length, Math.ceil(travelHours)));
+  return hours.slice(0, span);
+}
+
+// ----- New section components -----
+
+function JourneyCard({ origin, destination }: { origin: LocationConditions; destination: LocationConditions }) {
+  const km = haversineKm(origin.location, destination.location);
+  const mode = pickMode(origin.location, destination.location);
+  const isFlight = mode.mode === "flight";
+  const enRoute = enRouteHours(origin.weather.hourly, mode.hours);
+  const wetHours = enRoute.filter(h => h.precipProb >= 50).length;
+  const windyAtStart = origin.weather.windSpeed >= 22;
+
+  let journeyStory: string;
+  if (isFlight) {
+    journeyStory = `It's ~${Math.round(km)} km — well into flight territory. Plan around airport time, not driving time. Skies en route don't matter much; focus on conditions at the destination airport when you land.`;
+  } else {
+    const bits: string[] = [];
+    bits.push(`Roughly ${Math.round(km)} km — about ${formatHours(mode.hours)} door to door.`);
+    if (wetHours >= 2) bits.push(`Expect rain for ${wetHours} of the next ${enRoute.length} hours of travel — keep wipers ready or pack a waterproof.`);
+    else if (wetHours === 1) bits.push(`A brief shower is possible mid-journey.`);
+    else bits.push(`Largely dry the whole way.`);
+    if (windyAtStart) bits.push(`Winds are gusty (${Math.round(origin.weather.windSpeed)} mph) — high-sided vehicles and bridges will feel it.`);
+    journeyStory = bits.join(" ");
+  }
+
   return (
-    <div className="rounded-lg bg-secondary/40 p-2 text-center">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm font-bold tabular">{value}</div>
+    <SectionCard icon={<Route className="h-3.5 w-3.5 text-primary" />} title="The journey">
+      <div className="mb-3 flex items-center gap-2 rounded-xl bg-secondary/40 p-3 text-xs">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background/60 text-primary">
+          {mode.icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold uppercase tracking-wider">{mode.label}</div>
+          <div className="text-foreground/80">{mode.note}</div>
+        </div>
+        <div className="text-right tabular">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Travel</div>
+          <div className="text-sm font-bold">{formatHours(mode.hours)}</div>
+        </div>
+      </div>
+
+      <p className="text-sm leading-relaxed text-foreground/95">{journeyStory}</p>
+
+      {!isFlight && enRoute.length > 1 && (
+        <div className="mt-3">
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            On the way (from {displayName(origin.location)})
+          </div>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            {enRoute.map((h, i) => {
+              const info = describeWeather(h.weatherCode, true);
+              const hr = new Date(h.time).toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false, timeZone: origin.weather.timezone }).replace(":00", "");
+              return (
+                <div key={i} className="flex min-w-[48px] flex-col items-center gap-0.5 rounded-lg bg-secondary/40 px-2 py-1.5">
+                  <div className="text-[9px] text-muted-foreground tabular">{i === 0 ? "Now" : `${hr}:00`}</div>
+                  <div className="text-base leading-none">{info.icon}</div>
+                  <div className="text-xs font-semibold tabular">{Math.round(h.feelsLike)}°</div>
+                  {h.precipProb >= 30 && (
+                    <div className="text-[9px] text-primary tabular">{Math.round(h.precipProb)}%</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+function ArrivalCard({ origin, destination }: { origin: LocationConditions; destination: LocationConditions }) {
+  const mode = pickMode(origin.location, destination.location);
+  const isFlight = mode.mode === "flight";
+  const arrival = new Date(Date.now() + mode.hours * 3600 * 1000);
+  const arrivalLocal = localTime(destination.weather.timezone, arrival);
+  const nowLocalHere = localTime(origin.weather.timezone, new Date());
+
+  const at = hourAtOffset(destination.weather.hourly, mode.hours) ?? destination.weather.hourly[0];
+  const usingForecast = at && new Date(at.time).getTime() > Date.now() + 30 * 60 * 1000;
+  const info = at ? describeWeather(at.weatherCode, true) : describeWeather(destination.weather.weatherCode, destination.weather.isDay);
+
+  const story = isFlight
+    ? arrivalStoryFlight(destination, at, arrivalLocal)
+    : arrivalStoryGround(destination, at, arrivalLocal);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border border-border p-5 shadow-card"
+      style={dynamicSkyStyle(info.sky, at?.feelsLike ?? destination.weather.feelsLike, {
+        windSpeed: destination.weather.windSpeed,
+        humidity: destination.weather.humidity,
+        cloudCover: at?.cloudCover ?? destination.weather.cloudCover,
+        uvIndex: destination.weather.uvIndex,
+        isDay: destination.weather.isDay,
+      })}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent to-background/55" />
+      <div className="relative">
+        <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <Clock className="h-3 w-3 text-primary" />
+          {usingForecast ? `Forecast for arrival — ~${arrivalLocal} local` : `Right now in ${displayName(destination.location)}`}
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs text-foreground/70">It's {nowLocalHere} here · expect {arrivalLocal} there</div>
+            <div className="mt-1 text-3xl font-bold tabular">{Math.round(at?.feelsLike ?? destination.weather.feelsLike)}°</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Feels like on arrival</div>
+          </div>
+          <div className="text-5xl leading-none">{info.icon}</div>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-foreground/95">{story}</p>
+      </div>
     </div>
   );
 }
 
-function displayName(l: Location): string { return l.customName || l.name; }
-
-// ----- Stories & lists -----
-
-function weatherStory(d: LocationConditions): string {
-  const info = describeWeather(d.weather.weatherCode, d.weather.isDay);
-  const t = Math.round(d.weather.feelsLike);
-  const rain = Math.round(d.weather.precipProb);
-  const wind = Math.round(d.weather.windSpeed);
-  const bits = [`${displayName(d.location)} is ${info.short.toLowerCase()} and feels like ${t}°`];
-  if (rain >= 60) bits.push(`expect proper wet weather (${rain}% rain)`);
-  else if (rain >= 30) bits.push(`there's a chance of showers (${rain}%)`);
-  else bits.push(`largely dry`);
-  if (wind >= 25) bits.push(`and pretty blustery (${wind} mph wind)`);
-  else if (wind >= 15) bits.push(`with a breeze`);
-  if (severityRank[d.aqi.level] >= 2) bits.push(`— air quality isn't great either`);
-  if (severityRank[d.pollen.level] >= 2) bits.push(`— and pollen's running high`);
+function arrivalStoryGround(d: LocationConditions, at: WeatherHour | undefined, arrivalLocal: string): string {
+  const info = describeWeather(at?.weatherCode ?? d.weather.weatherCode, true);
+  const t = Math.round(at?.feelsLike ?? d.weather.feelsLike);
+  const rain = Math.round(at?.precipProb ?? d.weather.precipProb);
+  const bits = [`Rolling into ${displayName(d.location)} around ${arrivalLocal}, you'll find it ${info.short.toLowerCase()} and feeling like ${t}°`];
+  if (rain >= 60) bits.push(`with rain very likely (${rain}%) — have a jacket on top of your bag`);
+  else if (rain >= 30) bits.push(`with a ${rain}% chance of a shower — umbrella in the car door`);
+  if (severityRank[d.pollen.level] >= 2) bits.push(`pollen is high, so antihistamines if you're sensitive`);
   return bits.join(", ") + ".";
 }
+
+function arrivalStoryFlight(d: LocationConditions, at: WeatherHour | undefined, arrivalLocal: string): string {
+  const info = describeWeather(at?.weatherCode ?? d.weather.weatherCode, true);
+  const t = Math.round(at?.feelsLike ?? d.weather.feelsLike);
+  const rain = Math.round(at?.precipProb ?? d.weather.precipProb);
+  const wind = Math.round(d.weather.windSpeed);
+  const bits = [`When you step out of the terminal in ${displayName(d.location)} around ${arrivalLocal} it should be ${info.short.toLowerCase()}, feeling like ${t}°`];
+  if (rain >= 60) bits.push(`taxi queues will be wet — keep a packable raincoat in your carry-on`);
+  if (wind >= 25) bits.push(`gusty (${wind} mph), so expect a bumpy approach`);
+  if (severityRank[d.aqi.level] >= 2) bits.push(`air quality near the airport isn't great — an N95 helps if you're sensitive`);
+  return bits.join(", ") + ".";
+}
+
+function takeWithYou(origin: LocationConditions, destination: LocationConditions): string[] {
+  const mode = pickMode(origin.location, destination.location);
+  const out: string[] = [];
+  const enRoute = enRouteHours(origin.weather.hourly, mode.hours);
+  const willRain = enRoute.some(h => h.precipProb >= 50) || destination.weather.precipProb >= 50;
+  const willBeCold = (destination.weather.feelsLike < 8) || (origin.weather.feelsLike < 8);
+
+  if (mode.mode === "flight") {
+    out.push("Passport, boarding pass on your phone (and a screenshot), and the right power adaptor.");
+    out.push("Refillable bottle (empty through security), snacks, headphones, neck pillow.");
+    out.push("Packable rain shell in your carry-on for the walk to the taxi rank.");
+    if (severityRank[destination.aqi.level] >= 2) out.push("A spare FFP2/N95 mask for arrivals — air quality there is dipping.");
+  } else if (mode.mode === "drive") {
+    out.push("Phone mount, charger cable, and offline maps for any patchy signal.");
+    out.push("Water, snacks, and a spare layer — drives feel longer in bad weather.");
+    if (willRain) out.push("Working wipers and washer fluid — and lights on early in heavy rain.");
+    if (willBeCold) out.push("De-icer, scraper, and a blanket in the boot just in case.");
+  } else if (mode.mode === "train") {
+    out.push("Ticket QR, headphones, and a power bank — sockets aren't always working.");
+    out.push("Something to read or download; a light layer for over-aircon carriages.");
+    if (willRain) out.push("Compact umbrella for the platform.");
+  } else {
+    out.push("Phone charged, comfortable shoes, and a water bottle.");
+  }
+
+  if (willRain && mode.mode !== "flight") out.push("Quick-dry socks — wet feet ruin a journey.");
+  if (destination.weather.uvIndex >= 6) out.push("Sunglasses & SPF — UV is strong at the destination.");
+  return out;
+}
+
+// ----- Stories & lists -----
 
 function bestDayStory(d: LocationConditions): string {
   let bestIdx = 0; let bestScore = -Infinity;
@@ -259,71 +446,6 @@ function packingList(origin: LocationConditions, dest: LocationConditions): stri
   if (Math.abs(tThere - tHere) >= 10)
     out.push(`Pack for a big temperature swing — ${Math.round(tHere)}° here vs ${Math.round(tThere)}° there.`);
   out.push("Power bank, adaptor for the country, and a refillable water bottle.");
-  return out;
-}
-
-function routeStory(origin: LocationConditions, dest: LocationConditions): string {
-  const km = haversineKm(origin.location, dest.location);
-  const sameCountry = origin.location.countryCode && origin.location.countryCode === dest.location.countryCode;
-  if (km < 30) return `It's about ${Math.round(km)} km — practically next door. Easiest by car or local train.`;
-  if (km < 200) return `Roughly ${Math.round(km)} km. A train or drive should land you there inside a few hours.`;
-  if (km < 800 && sameCountry) return `Around ${Math.round(km)} km — a longer intercity train or a half-day drive.`;
-  if (km < 1500) return `It's about ${Math.round(km)} km — flying will be quickest, but a sleeper train or coach is doable.`;
-  return `Long haul: ~${Math.round(km)} km. Flying is the realistic option; book ahead and check transit visas if any.`;
-}
-
-function transportOptions(origin: LocationConditions, dest: LocationConditions): { mode: string; detail: string; icon: React.ReactNode }[] {
-  const km = haversineKm(origin.location, dest.location);
-  const opts: { mode: string; detail: string; icon: React.ReactNode }[] = [];
-  const ic = (k: "train" | "plane" | "route") =>
-    k === "train" ? <Train className="h-4 w-4" /> : k === "plane" ? <Plane className="h-4 w-4" /> : <Route className="h-4 w-4" />;
-
-  if (km < 5) {
-    opts.push({ mode: "Walk / cycle", detail: "Under 5 km — easily walkable, faster on a bike.", icon: ic("route") });
-    opts.push({ mode: "Bus or metro", detail: "Hop on the nearest line — under 15 minutes most of the time.", icon: ic("train") });
-  } else if (km < 50) {
-    opts.push({ mode: "Local train / metro", detail: "Check the regional rail or metro network — usually the quickest option.", icon: ic("train") });
-    opts.push({ mode: "Bus / coach", detail: "Cheaper and runs often on short hops.", icon: ic("route") });
-    opts.push({ mode: "Drive", detail: "30–60 min depending on traffic. Watch for city congestion charges.", icon: ic("route") });
-  } else if (km < 300) {
-    opts.push({ mode: "Intercity train", detail: "Best balance of speed and comfort — book in advance for cheaper fares.", icon: ic("train") });
-    opts.push({ mode: "Coach", detail: "Slowest but cheapest — overnight services often available.", icon: ic("route") });
-    opts.push({ mode: "Drive", detail: `Around ${Math.round(km / 80)} h on the motorway with stops.`, icon: ic("route") });
-  } else if (km < 1000) {
-    opts.push({ mode: "High-speed rail", detail: "If a route exists, this beats flying once you count check-in.", icon: ic("train") });
-    opts.push({ mode: "Short-haul flight", detail: `About ${Math.max(1, Math.round(km / 800))} h in the air, plus 2 h airport time.`, icon: ic("plane") });
-    opts.push({ mode: "Drive", detail: `${Math.round(km / 80)} h on the road — split across a day or two.`, icon: ic("route") });
-  } else {
-    opts.push({ mode: "Flight", detail: `${Math.max(1, Math.round(km / 800))} h flight time. Look at evening departures for cheaper fares.`, icon: ic("plane") });
-    opts.push({ mode: "Rail (where possible)", detail: "Sleeper trains can connect Europe and parts of Asia — slower but a proper experience.", icon: ic("train") });
-  }
-  return opts;
-}
-
-function thingsToDo(d: LocationConditions): string[] {
-  const out: string[] = [];
-  const t = d.weather.feelsLike;
-  const wet = d.weather.precipProb >= 50;
-  const sunny = d.weather.cloudCover < 35 && d.weather.isDay;
-  if (wet) {
-    out.push("Lean into indoor things — museums, galleries, a long lunch, coffee crawl.");
-    out.push("Cinema or a thermal/spa — the perfect rainy-day reset.");
-  }
-  if (sunny && t >= 18) {
-    out.push("Find a park, riverside or rooftop — the city always looks best in the sun.");
-    out.push("Outdoor markets and patios open up — make a day of grazing.");
-  }
-  if (t < 5) {
-    out.push("Christmas markets (in season), or warm cafés with proper hot chocolate.");
-    out.push("Indoor activities: live music, comedy, a cosy pub.");
-  }
-  if (t >= 25) {
-    out.push("Early mornings and late evenings outside; midday — find shade or a pool.");
-    out.push("Get on or near water — lakes, beaches, boat trips.");
-  }
-  // Generic always-on suggestions
-  out.push(`Try the local specialty in ${displayName(d.location)} — ask any local for "the one place".`);
-  out.push("Pick one walkable neighbourhood and explore on foot — best way to feel a place.");
   return out;
 }
 
