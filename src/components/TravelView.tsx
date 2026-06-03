@@ -7,6 +7,7 @@ import {
   Clock, Navigation, Luggage,
 } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { LocalTimeCard } from "./LocalTimeCard";
 
 interface Props {
   locations: Location[];
@@ -52,6 +53,15 @@ export function TravelView({ locations, queries }: Props) {
 
       {/* Route header */}
       <RouteHeader origin={origin} destination={destination} />
+
+      {/* If the destination sits in a different timezone, surface its current
+          local time so users planning a trip aren't constantly converting. */}
+      {destination && (
+        <LocalTimeCard
+          timezone={destination.weather.timezone}
+          placeName={displayName(destination.location)}
+        />
+      )}
 
       {/* Destination chooser */}
       <div className="glass-card p-4">
@@ -214,10 +224,14 @@ function formatHours(h: number): string {
   return `${Math.round(h)} h`;
 }
 
-/** Local clock string for a weather timezone. */
+/** Local clock string for a weather timezone, including the short
+ *  timezone abbreviation (e.g. "16:27 BST"). */
 function localTime(tz: string, date: Date): string {
   try {
-    return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+    const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+    const tzName = new Intl.DateTimeFormat("en-GB", { timeZone: tz, timeZoneName: "short" })
+      .formatToParts(date).find(p => p.type === "timeZoneName")?.value ?? "";
+    return tzName ? `${time} ${tzName}` : time;
   } catch {
     return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
   }
@@ -315,7 +329,6 @@ function ArrivalCard({ origin, destination }: { origin: LocationConditions; dest
   const isFlight = mode.mode === "flight";
   const arrival = new Date(Date.now() + mode.hours * 3600 * 1000);
   const arrivalLocal = localTime(destination.weather.timezone, arrival);
-  const nowLocalHere = localTime(origin.weather.timezone, new Date());
 
   const at = hourAtOffset(destination.weather.hourly, mode.hours) ?? destination.weather.hourly[0];
   const usingForecast = at && new Date(at.time).getTime() > Date.now() + 30 * 60 * 1000;
@@ -340,11 +353,15 @@ function ArrivalCard({ origin, destination }: { origin: LocationConditions; dest
       <div className="relative">
         <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           <Clock className="h-3 w-3 text-primary" />
-          {usingForecast ? `Forecast for arrival — ~${arrivalLocal} local` : `Right now in ${displayName(destination.location)}`}
+          {usingForecast ? "Forecast for arrival" : `Right now in ${displayName(destination.location)}`}
         </div>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs text-foreground/70">It's {nowLocalHere} here · expect {arrivalLocal} there</div>
+            <div className="text-xs text-foreground/85">
+              {usingForecast
+                ? <>Local time will be <span className="font-semibold tabular">{arrivalLocal}</span>. Here's what the weather will be like:</>
+                : <>Currently in {displayName(destination.location)}:</>}
+            </div>
             <div className="mt-1 text-3xl font-bold tabular">{Math.round(at?.feelsLike ?? destination.weather.feelsLike)}°</div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Feels like on arrival</div>
           </div>

@@ -259,19 +259,30 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     });
   }
 
-  // Reconcile current vs. current-hour: if the live "current" code disagrees
-  // with the hourly forecast for *this* hour (e.g. API says "cloudy" but the
-  // hour is meant to be raining at 98%), trust whichever is wetter so the
-  // hero matches the hourly strip and the animations actually fire when it's
-  // raining outside.
+  // Reconcile current vs. current-hour. Open-Meteo's `current` block sometimes
+  // reports "overcast" or "partly cloudy" while it's actively raining (the
+  // station hasn't logged precip yet but the hourly forecast and the live
+  // `rain`/`precipitation` fields both say it's wet). Trust whichever signal
+  // is wetter so the hero, animations and hourly strip never disagree.
   const currentHourCode = hourly.weather_code[startIdx] ?? c.weather_code;
   const currentHourProb = hourly.precipitation_probability[startIdx] ?? 0;
   const isWetCode = (code: number) =>
     (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
-  const reconciledCode =
-    !isWetCode(c.weather_code) && (isWetCode(currentHourCode) || currentHourProb >= 70)
-      ? currentHourCode
-      : c.weather_code;
+  const liveRainMm = Math.max(c.rain ?? 0, c.precipitation ?? 0);
+  const actuallyRaining = liveRainMm > 0.05;
+  // Pick an appropriate wet code if we need to synthesise one.
+  const synthRainCode = (mm: number) =>
+    mm >= 4 ? 63 : mm >= 1 ? 61 : 51;
+  let reconciledCode = c.weather_code;
+  if (!isWetCode(c.weather_code)) {
+    if (isWetCode(currentHourCode)) {
+      reconciledCode = currentHourCode;
+    } else if (actuallyRaining) {
+      reconciledCode = synthRainCode(liveRainMm);
+    } else if (currentHourProb >= 70) {
+      reconciledCode = currentHourCode;
+    }
+  }
   const info = describeWeather(reconciledCode, !!c.is_day);
 
   const days: WeatherDay[] = [];
@@ -295,9 +306,10 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     feelsLike: c.apparent_temperature,
     high: d.temperature_2m_max[0],
     low: d.temperature_2m_min[0],
-    // Show the chance of rain *right now*, not the daily maximum — that's what
-    // matches the hourly strip and the user's actual experience outside.
-    precipProb: currentHourProb,
+    // Show the chance of rain *right now*, not the daily maximum — and if
+    // it's literally raining at this moment force it to 100% so the hero
+    // doesn't claim "20% chance" while the user is getting soaked.
+    precipProb: actuallyRaining ? Math.max(currentHourProb, 100) : currentHourProb,
     rainTotal: d.precipitation_sum[0] ?? 0,
     windSpeed: c.wind_speed_10m,
     windGust: c.wind_gusts_10m,
