@@ -26,9 +26,19 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isHail    = code === 96 || code === 99;
   const isSnow    = (code >= 71 && code <= 77) || code === 85 || code === 86;
   const codeIsRain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || isThunder;
-  // Fall-back: if the current hour is very likely wet, render rain even if
-  // the WMO code hasn't caught up yet. Stops the "100% rain but no drops" bug.
+  // Fall-back: if the current hour is very likely wet, render a *light*
+  // drizzle even if the WMO code hasn't caught up yet. Stops the "100% rain
+  // but no drops" bug without faking a downpour.
   const isRain    = codeIsRain || (!isSnow && weather.precipProb >= 70);
+  // Match the visual intensity to the actual weather code rather than
+  // forcing every wet condition to look like a heavy shower.
+  const rainCategory: "drizzle" | "light" | "moderate" | "heavy" =
+    isThunder || code === 65 || code === 67 || code === 82 ? "heavy" :
+    code === 63 || code === 81 ? "moderate" :
+    code === 55 || code === 61 || code === 66 || code === 80 ? "light" :
+    code === 51 || code === 53 ? "drizzle" :
+    // precip-probability fallback when code doesn't say rain
+    weather.precipProb >= 90 ? "light" : "drizzle";
   const isFog     = code === 45 || code === 48;
   const isWindy   = weather.windSpeed >= 8;     // even a gentle breeze shows a couple of wisps
   const cloud     = weather.cloudCover;
@@ -62,7 +72,7 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
       {/* smoke — wildfire / industrial smoke */}
       {isSmoke && <Smoke intensity={intensity} />}
       {/* rain */}
-      {isRain && !isSnow && <Rain heavy={code === 65 || code === 67 || code === 82 || isThunder || weather.precipProb >= 85} intensity={Math.max(intensity, 1.4)} />}
+      {isRain && !isSnow && <Rain category={rainCategory} intensity={intensity} />}
       {/* hail */}
       {isHail && <Hail />}
       {/* snow */}
