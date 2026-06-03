@@ -94,17 +94,33 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
 /* -----------------------------------------------------------------------
  * Individual effect layers
  * ---------------------------------------------------------------------*/
-export function Rain({ heavy, intensity = 1 }: { heavy?: boolean; intensity?: number }) {
-  const drops = Math.round((heavy ? 140 : 90) * intensity);
+export function Rain({
+  category = "moderate",
+  intensity = 1,
+}: { category?: "drizzle" | "light" | "moderate" | "heavy"; intensity?: number; heavy?: boolean }) {
+  // Calibrated drop counts so a drizzle reads as a few wispy streaks,
+  // not a downpour. Heavy stays dense and dramatic.
+  const baseCount =
+    category === "heavy"    ? 130 :
+    category === "moderate" ? 80  :
+    category === "light"    ? 42  :
+                              22; // drizzle
+  const drops = Math.round(baseCount * intensity);
+  const heavy = category === "heavy";
+  const lenMin = category === "drizzle" ? 6  : category === "light" ? 9  : 14;
+  const lenMax = category === "drizzle" ? 14 : category === "light" ? 20 : (heavy ? 36 : 26);
+  const opMin  = category === "drizzle" ? 0.28 : category === "light" ? 0.4  : 0.55;
+  const opMax  = category === "drizzle" ? 0.55 : category === "light" ? 0.75 : 0.95;
+  const thick  = heavy ? 1.6 : category === "moderate" ? 1.2 : category === "light" ? 1 : 0.8;
+  const speed  = category === "drizzle" ? [0.7, 1.2] : category === "light" ? [0.55, 0.9] : [0.35, 0.7];
   return (
     <div className="fx-layer">
       {arr(drops).map((_, i) => {
         const left = rand(0, 100, i + 1);
-        const dur = rand(0.35, 0.7, i + 7);
+        const dur = rand(speed[0], speed[1], i + 7);
         const delay = rand(0, 1.5, i + 13);
-        const len = rand(14, heavy ? 36 : 26, i + 19);
-        const op = rand(0.55, 0.95, i + 23);
-        const thick = heavy ? 1.6 : 1.2;
+        const len = rand(lenMin, lenMax, i + 19);
+        const op = rand(opMin, opMax, i + 23);
         return (
           <span key={i} style={{
             position: "absolute",
