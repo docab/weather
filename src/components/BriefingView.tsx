@@ -5,6 +5,7 @@ import { SeverityBadge } from "./SeverityBadge";
 import { MapPin, Locate, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { LocationsMapCard } from "./LocationsMapCard";
 
 interface Props {
   locations: Location[];
@@ -20,6 +21,7 @@ export function BriefingView({ locations, queries, onOpenLocation }: Props) {
   if (!locations.length) return null;
   return (
     <div className="space-y-3 animate-fade-in-up">
+      <LocationsMapCard locations={locations} onSelect={onOpenLocation} />
       <div className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Right now · across your places
       </div>
