@@ -4,6 +4,7 @@ import { PerfumeFX, AnimatedUmbrella } from "./fx/WeatherFX";
 import { buildPerfumeNotes } from "@/lib/narrative";
 import { ClothingIcon } from "./icons/ClothingIcon";
 import { PerfumeBottle } from "./icons/PerfumeBottle";
+import { LocalTimeCard } from "./LocalTimeCard";
 
 export function NarrativeCard({ conditions }: { conditions: LocationConditions }) {
   const needUmbrella = conditions.weather.precipProb >= 40;
@@ -11,9 +12,16 @@ export function NarrativeCard({ conditions }: { conditions: LocationConditions }
   return (
     <div className="relative overflow-hidden glass-card p-5 shadow-card">
       <PerfumeFX notes={notes} />
-      <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        <Sparkles className="h-3.5 w-3.5 text-primary" />
-        How it'll feel
+      <div className="relative mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          How it'll feel
+        </div>
+        <LocalTimeCard
+          timezone={conditions.weather.timezone}
+          placeName={conditions.location.customName || conditions.location.name}
+          variant="inline"
+        />
       </div>
       <p className="relative text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
 

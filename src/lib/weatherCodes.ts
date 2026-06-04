@@ -187,12 +187,21 @@ export function dynamicSkyStyle(
     }
   }
 
-  // Safety rail: snap any stray green/teal hue (60–200) onto the nearest
-  // sky-realistic band — pull toward blue if it was cool, toward amber if warm.
-  if (b.h > 60 && b.h < 200) {
-    b.h = feelsLike >= 19 ? 44 : 210;
-    b.s = Math.max(b.s, 35);
-  }
+  // Safety rail: collapse any hue the sky never actually shows onto the
+  // nearest realistic band. Without this, the shorter-arc interpolation from
+  // warm hues (~26°) toward rain-blue (~212°) or night-indigo (~232°) can
+  // pass right through magenta/purple (~280°) — that's the "30°C + rain
+  // looks pink" bug. Skies are blue, white, grey, cream, amber, orange,
+  // red, indigo — never teal, never magenta.
+  const safeSkyHue = (h: number, warm: boolean): number => {
+    h = ((h % 360) + 360) % 360;
+    // greens/teals → snap
+    if (h > 60 && h < 195) return warm ? 40 : 210;
+    // purples/magentas/pinks → snap (anything 245..345)
+    if (h > 245 && h < 345) return warm ? 18 : 232;
+    return h;
+  };
+  b.h = safeSkyHue(b.h, feelsLike >= 19);
 
   // --- Modifier 4: UV / sun intensity. Bright clear days pop harder.
   if (sky === "clear" && mods.isDay !== false && uv > 0) {
@@ -239,6 +248,9 @@ export function dynamicSkyStyle(
     default:
       break;
   }
+
+  // Final clamp — sky overlays above can also drag through forbidden hues.
+  b.h = safeSkyHue(b.h, feelsLike >= 19);
 
   const h = Math.round(b.h);
   const s = Math.round(b.s);

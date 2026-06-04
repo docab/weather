@@ -104,6 +104,18 @@ const Index = () => {
     }
   };
 
+  const handleReorder = (id: string, dir: -1 | 1) => {
+    // Reorder against savedLocations (auto-detected always pins to index 0).
+    const list = [...savedLocations];
+    const idx = list.findIndex(l => l.id === id);
+    if (idx < 0) return;
+    const next = idx + dir;
+    if (next < 0 || next >= list.length) return;
+    [list[idx], list[next]] = [list[next], list[idx]];
+    setSavedLocations(list);
+    saveLocations(list);
+  };
+
   const refresh = () => {
     geo.request();
     queryClient.invalidateQueries({ queryKey: ["conditions"] });
@@ -189,7 +201,7 @@ const Index = () => {
               <TabsTrigger value="briefing" className="px-1">Now</TabsTrigger>
               <TabsTrigger value="today" className="px-1">Today</TabsTrigger>
               <TabsTrigger value="forecast" className="px-1">7-day</TabsTrigger>
-              <TabsTrigger value="stars" className="px-1">Stars</TabsTrigger>
+              <TabsTrigger value="stars" className="px-1">Sky</TabsTrigger>
               <TabsTrigger value="travel" className="px-1">Travel</TabsTrigger>
             </TabsList>
 
@@ -214,6 +226,7 @@ const Index = () => {
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
                   onRename={handleRename}
+                  onReorder={handleReorder}
                   detailed={detailed}
                 />
               </div>
@@ -237,6 +250,7 @@ const Index = () => {
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
                   onRename={handleRename}
+                  onReorder={handleReorder}
                   detailed={detailed}
                 />
               </div>
@@ -254,6 +268,7 @@ const Index = () => {
                   canAdd={savedLocations.length < MAX_SAVED}
                   onRemove={handleRemove}
                   onRename={handleRename}
+                  onReorder={handleReorder}
                   detailed={detailed}
                 />
               </div>
