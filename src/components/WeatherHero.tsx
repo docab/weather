@@ -10,6 +10,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const SkyIcon = info.Icon;
   const isClear = info.sky === "clear";
   const phase = getMoonPhase(new Date());
+  const phaseOverlay = sunPhaseOverlay(weather);
   return (
     <div
       className="glass-card relative overflow-hidden p-6"
@@ -22,17 +23,23 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       })}
     >
       <WeatherFX weather={weather} />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/40" />
+      {/* Time-of-day overlay — dawn / dusk warm wash, deep-night cool wash. */}
+      {phaseOverlay && (
+        <div className="pointer-events-none absolute inset-0" style={{ background: phaseOverlay }} />
+      )}
+      {/* Legibility scrim — darker around the text, transparent at the top.
+          Without this, big text disappears on the cream/butter mid-range. */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/3 bottom-0 bg-gradient-to-b from-transparent via-background/25 to-background/55" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
-      <div className="relative">
+      <div className="relative [text-shadow:0_1px_2px_rgb(0_0_0_/_0.35)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <div className="text-xs font-semibold uppercase tracking-widest text-foreground/85">
               {info.label}
             </div>
             <div className="mt-1 tabular">
               <span className="block text-7xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
-              <span className="mt-1 block text-[11px] uppercase tracking-widest text-muted-foreground">
+              <span className="mt-1 block text-[11px] uppercase tracking-widest text-foreground/75">
                 Feels like
               </span>
               <span className="mt-1 block text-sm text-foreground/70">
@@ -67,6 +74,41 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       </div>
     </div>
   );
+}
+
+/**
+ * Compute a soft warm/cool overlay based on how close the current time is to
+ * sunrise or sunset (within ~90 min on either side). Returns a CSS gradient
+ * string or null when no overlay is needed.
+ */
+function sunPhaseOverlay(w: LocationConditions["weather"]): string | null {
+  const sunrise = w.daily?.[0]?.sunrise;
+  const sunset = w.daily?.[0]?.sunset;
+  if (!sunrise || !sunset) return null;
+  const now = Date.now();
+  const sr = new Date(sunrise).getTime();
+  const ss = new Date(sunset).getTime();
+  const win = 90 * 60 * 1000; // 90 min
+
+  // 0 = right at the event, 1 = at the edge of the window.
+  const distSr = Math.abs(now - sr) / win;
+  const distSs = Math.abs(now - ss) / win;
+
+  if (distSr <= 1) {
+    const k = 1 - distSr; // strength
+    // Dawn: cool pre-dawn purple bottom → warm peach top.
+    return `linear-gradient(180deg, hsl(28 95% 65% / ${0.10 + k * 0.32}) 0%, hsl(18 90% 55% / ${0.06 + k * 0.18}) 38%, transparent 70%)`;
+  }
+  if (distSs <= 1) {
+    const k = 1 - distSs;
+    // Dusk: amber → magenta-tinted horizon, but using only red/orange (no purple).
+    return `linear-gradient(180deg, hsl(34 90% 55% / ${0.08 + k * 0.20}) 0%, hsl(14 92% 50% / ${0.10 + k * 0.34}) 55%, hsl(232 50% 14% / ${k * 0.25}) 100%)`;
+  }
+  // Deep night — extra navy wash to deepen the sky.
+  if (!w.isDay && now > ss + win && now < sr - win) {
+    return "linear-gradient(180deg, hsl(232 55% 8% / 0.35) 0%, hsl(228 60% 6% / 0.45) 100%)";
+  }
+  return null;
 }
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

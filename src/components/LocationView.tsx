@@ -6,17 +6,17 @@ import { PollenCard } from "./PollenCard";
 import { AqiCard } from "./AqiCard";
 import { AlertsList } from "./AlertsList";
 import { SkyNowCard } from "./SkyNowCard";
-import { LocalTimeCard } from "./LocalTimeCard";
+import { WeatherRadarCard } from "./WeatherRadarCard";
 
 export function LocationView({ conditions }: { conditions: LocationConditions }) {
   return (
     <div className="space-y-4 animate-fade-in-up">
       <WeatherHero conditions={conditions} />
-      <LocalTimeCard timezone={conditions.weather.timezone} placeName={conditions.location.customName || conditions.location.name} />
       {conditions.weather.alerts.length > 0 && (
         <AlertsList alerts={conditions.weather.alerts} />
       )}
       <NarrativeCard conditions={conditions} />
+      <WeatherRadarCard conditions={conditions} />
       <SkyNowCard conditions={conditions} />
       <HourlyStrip weather={conditions.weather} />
       <div className="grid gap-4 md:grid-cols-2">
