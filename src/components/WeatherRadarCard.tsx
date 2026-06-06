@@ -14,9 +14,15 @@ interface RvIndex {
 
 /**
  * Weather radar card powered by the free RainViewer API.
- * Supports rain radar (past + nowcast) and satellite cloud cover, with a
- * lightweight playback control. No API key required.
+ * RainViewer tiles are only published up to zoom 10 — anything beyond
+ * triggers a "zoom not supported" warning and a flood of 404s. We cap the
+ * Leaflet map's zoom range so that can't happen, and we reuse a single
+ * overlay layer (swapping its URL on each frame) so playback doesn't churn
+ * through TileLayer instances and lag the page.
  */
+const MIN_Z = 4;
+const MAX_Z = 10;
+
 export function WeatherRadarCard({ conditions }: { conditions: LocationConditions }) {
   const lat = conditions.weather.latitude ?? conditions.location.latitude;
   const lon = conditions.weather.longitude ?? conditions.location.longitude;
@@ -26,7 +32,7 @@ export function WeatherRadarCard({ conditions }: { conditions: LocationCondition
   const overlayRef = useRef<L.TileLayer | null>(null);
   const [layer, setLayer] = useState<LayerKey>("rain");
   const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const [data, setData] = useState<RvIndex | null>(null);
 
   // Init map once.
@@ -36,11 +42,16 @@ export function WeatherRadarCard({ conditions }: { conditions: LocationCondition
       zoomControl: false,
       attributionControl: false,
       scrollWheelZoom: false,
-      dragging: true,
+      dragging: false,
       doubleClickZoom: false,
-    }).setView([lat, lon], 8);
+      touchZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      minZoom: MIN_Z,
+      maxZoom: MAX_Z,
+    }).setView([lat, lon], 7);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 12, attribution: "&copy; OSM, &copy; CARTO",
+      maxZoom: MAX_Z, minZoom: MIN_Z, attribution: "&copy; OSM, &copy; CARTO",
     }).addTo(map);
     L.circleMarker([lat, lon], {
       radius: 6, color: "hsl(var(--primary))", weight: 2,
@@ -78,27 +89,29 @@ export function WeatherRadarCard({ conditions }: { conditions: LocationCondition
   // Playback ticker.
   useEffect(() => {
     if (!playing || frames.length < 2) return;
-    const id = setInterval(() => setIdx(i => (i + 1) % frames.length), 700);
+    const id = setInterval(() => setIdx(i => (i + 1) % frames.length), 1200);
     return () => clearInterval(id);
   }, [playing, frames.length]);
 
-  // Swap overlay tile layer when frame/layer changes.
+  // Reuse a single overlay layer and just swap its URL when frame/layer
+  // changes. Creating a fresh TileLayer per tick (the old behaviour) caused
+  // dozens of dangling tile requests and the lag the user was seeing.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !data || !frames.length) return;
     const f = frames[idx];
     if (!f) return;
-    const colour = layer === "rain" ? 4 : 0; // 4 = blue→red radar palette; 0 for IR
+    const colour = layer === "rain" ? 4 : 0;
     const smooth = 1;
     const snow = layer === "rain" ? 1 : 0;
     const url = `${data.host}${f.path}/256/{z}/{x}/{y}/${colour}/${smooth}_${snow}.png`;
-    const next = L.tileLayer(url, { opacity: 0.75, maxZoom: 12 });
-    next.addTo(map);
-    const prev = overlayRef.current;
-    overlayRef.current = next;
-    // Fade out prev once next loads to avoid flicker.
-    next.once("load", () => prev?.remove());
-    setTimeout(() => prev?.remove(), 600); // safety
+    if (overlayRef.current) {
+      overlayRef.current.setUrl(url);
+    } else {
+      overlayRef.current = L.tileLayer(url, {
+        opacity: 0.75, maxZoom: MAX_Z, minZoom: MIN_Z,
+      }).addTo(map);
+    }
   }, [idx, frames, data, layer]);
 
   const frameTime = frames[idx]?.time
