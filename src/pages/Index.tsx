@@ -9,6 +9,7 @@ import { BriefingView } from "@/components/BriefingView";
 import { ForecastView } from "@/components/ForecastView";
 import { StargazingView } from "@/components/StargazingView";
 import { TravelView } from "@/components/TravelView";
+import { MeView } from "@/components/MeView";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useConditionsForLocations } from "@/hooks/useConditions";
@@ -197,11 +198,12 @@ const Index = () => {
 
         {allLocations.length > 0 && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 glass-card text-xs">
+            <TabsList className="grid w-full grid-cols-6 glass-card text-xs">
               <TabsTrigger value="briefing" className="px-1">Now</TabsTrigger>
               <TabsTrigger value="today" className="px-1">Today</TabsTrigger>
               <TabsTrigger value="forecast" className="px-1">7-day</TabsTrigger>
               <TabsTrigger value="stars" className="px-1">Sky</TabsTrigger>
+              <TabsTrigger value="me" className="px-1">Me</TabsTrigger>
               <TabsTrigger value="travel" className="px-1">Travel</TabsTrigger>
             </TabsList>
 
@@ -278,6 +280,23 @@ const Index = () => {
 
             <TabsContent value="travel" className="mt-4">
               <TravelView locations={allLocations} queries={queries} />
+            </TabsContent>
+
+            <TabsContent value="me" className="mt-4">
+              <div className="mb-4">
+                <LocationTabs
+                  locations={allLocations}
+                  activeId={activeId}
+                  onSelect={handleSelect}
+                  onAdd={() => setAddOpen(true)}
+                  canAdd={savedLocations.length < MAX_SAVED}
+                  onRemove={handleRemove}
+                  onRename={handleRename}
+                  onReorder={handleReorder}
+                  detailed={detailed}
+                />
+              </div>
+              <MeView conditions={activeQuery?.data} />
             </TabsContent>
           </Tabs>
         )}
