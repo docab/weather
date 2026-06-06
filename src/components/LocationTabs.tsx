@@ -30,17 +30,17 @@ export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onR
           const display = loc.customName || loc.name;
           const hasMenu = canRename || canDelete || canReorder;
           return (
-            <div
+          <div
               key={loc.id}
               className={cn(
-                "group flex shrink-0 items-center gap-0.5 rounded-full border pl-2.5 pr-0.5 py-0.5 text-xs font-medium transition-all animate-fade-in",
+                "group flex shrink-0 items-center gap-1 rounded-full border pl-3.5 pr-1 py-1 text-sm font-medium transition-all animate-fade-in",
                 active
                   ? "border-primary/40 bg-primary/15 text-primary shadow-glow"
                   : "border-border bg-card text-muted-foreground hover:bg-card-elevated hover:text-foreground"
               )}
             >
-              <button onClick={() => onSelect(loc.id)} className="flex items-center gap-1.5 py-1">
-                {loc.isAutoDetected ? <Locate className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+              <button onClick={() => onSelect(loc.id)} className="flex items-center gap-1.5 py-1.5 pr-1">
+                {loc.isAutoDetected ? <Locate className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
                 <span className="leading-tight">{display}</span>
               </button>
               {hasMenu ? (
@@ -49,9 +49,9 @@ export function LocationTabs({ locations, activeId, onSelect, onAdd, canAdd, onR
                     <button
                       onClick={(e) => e.stopPropagation()}
                       aria-label={`More for ${display}`}
-                      className="flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-foreground/10 hover:text-foreground"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-foreground/10 hover:text-foreground"
                     >
-                      <MoreVertical className="h-3 w-3" />
+                      <MoreVertical className="h-3.5 w-3.5" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
