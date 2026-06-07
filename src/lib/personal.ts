@@ -106,23 +106,33 @@ export interface CommuteRisk {
   level: "ok" | "watch" | "warn";
   detail: string;
   hour: WeatherHour | null;
+  advice?: string;
 }
 
 export function commuteRiskAt(
   hhmm: string, weather: WeatherData, prefs: PersonalPrefs,
+  kind: "arrive" | "off" = "arrive",
 ): CommuteRisk {
   const [h, m] = hhmm.split(":").map(Number);
   const target = new Date(); target.setHours(h, m, 0, 0);
   if (target.getTime() < Date.now() - 30 * 60_000) target.setDate(target.getDate() + 1);
-  const closest = weather.hourly.reduce<WeatherHour | null>((acc, x) => {
-    if (!acc) return x;
+  // For "arrive by", inspect the 2h leading up to target. For "off at",
+  // inspect the 3h after target so we can suggest follow-on conditions.
+  const windowStart = kind === "arrive" ? target.getTime() - 2 * 3600_000 : target.getTime();
+  const windowEnd = kind === "arrive" ? target.getTime() : target.getTime() + 3 * 3600_000;
+  const window = weather.hourly.filter(x => {
+    const t = new Date(x.time).getTime();
+    return t >= windowStart - 30 * 60_000 && t <= windowEnd + 30 * 60_000;
+  });
+  const closest = window.length ? window.reduce((acc, x) => {
     const da = Math.abs(new Date(acc.time).getTime() - target.getTime());
     const db = Math.abs(new Date(x.time).getTime() - target.getTime());
     return db < da ? x : acc;
-  }, null);
+  }) : null;
   if (!closest) return { label: "No data", level: "ok", detail: "—", hour: null };
 
-  const rain = closest.precipProb;
+  const peakRainHour = window.reduce((a, x) => x.precipProb > a.precipProb ? x : a, window[0]);
+  const rain = peakRainHour.precipProb;
   const wind = weather.windSpeed;
   const t = closest.feelsLike;
   const isCold = t < 4, isHot = t > 28;
@@ -141,11 +151,34 @@ export function commuteRiskAt(
   const modeLabel: Record<CommuteMode, string> = {
     drive: "drive", cycle: "ride", walk: "walk", transit: "trip",
   };
-  const detail = flags.length
-    ? `Watch out on your ${modeLabel[mode]}: ${flags.join(" · ")}`
-    : `Smooth ${modeLabel[mode]} — nothing to flag.`;
+
+  const peakTime = new Date(peakRainHour.time).toLocaleTimeString("en-GB",
+    { hour: "2-digit", minute: "2-digit", hour12: false });
+
+  let detail: string;
+  let advice: string | undefined;
+  if (kind === "arrive") {
+    detail = flags.length
+      ? `Heading in for ${hhmm}: ${flags.join(" · ")} on the ${modeLabel[mode]}.`
+      : `Easy ${modeLabel[mode]} in — feels ${Math.round(t)}°, ${Math.round(rain)}% rain peak.`;
+    if (rain >= 60) {
+      advice = `Heaviest rain hits around ${peakTime} — leave 10–15 min earlier to dodge the worst.`;
+    } else if (level === "warn") {
+      advice = `Set off a little earlier — conditions get worse closer to ${hhmm}.`;
+    }
+  } else {
+    detail = flags.length
+      ? `Off at ${hhmm} into: ${flags.join(" · ")} on the ${modeLabel[mode]} home.`
+      : `Off at ${hhmm} — feels ${Math.round(t)}°, ${Math.round(rain)}% rain peak in the hours after.`;
+    if (rain >= 60) {
+      advice = `Rain peaks around ${peakTime}. Wait it out 20 min, or commit and bring waterproofs.`;
+    } else if (level === "warn") {
+      advice = `Things get rougher after ${hhmm} — kit up before you head out.`;
+    }
+  }
+
   return {
     label: target.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-    level, detail, hour: closest,
+    level, detail, hour: closest, advice,
   };
 }
