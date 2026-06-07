@@ -38,8 +38,8 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
     return Math.round(results.reduce((a, r) => a + r.scoreNow, 0) / results.length);
   }, [results]);
 
-  const outRisk = useMemo(() => conditions ? commuteRiskAt(prefs.commuteOut, conditions.weather, prefs) : null, [conditions, prefs]);
-  const backRisk = useMemo(() => conditions ? commuteRiskAt(prefs.commuteBack, conditions.weather, prefs) : null, [conditions, prefs]);
+  const outRisk = useMemo(() => conditions ? commuteRiskAt(prefs.commuteOut, conditions.weather, prefs, "arrive") : null, [conditions, prefs]);
+  const backRisk = useMemo(() => conditions ? commuteRiskAt(prefs.commuteBack, conditions.weather, prefs, "off") : null, [conditions, prefs]);
 
   if (!conditions) {
     return <div className="glass-card p-6 text-sm text-muted-foreground">Pick a location first to see your personalised view.</div>;
@@ -81,8 +81,8 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
           <CommuteIcon mode={prefs.commuteMode} /> Commute outlook
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <RiskRow title={`Out · ${prefs.commuteOut}`} risk={outRisk} />
-          <RiskRow title={`Back · ${prefs.commuteBack}`} risk={backRisk} />
+          <RiskRow title={`Arrive by ${prefs.commuteOut}`} risk={outRisk} />
+          <RiskRow title={`Off at ${prefs.commuteBack}`} risk={backRisk} />
         </div>
       </div>
 
@@ -138,12 +138,12 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Leave at">
+              <Field label="Arrive by (destination)">
                 <input type="time" value={prefs.commuteOut}
                   onChange={e => update({ ...prefs, commuteOut: e.target.value })}
                   className="w-full rounded-lg border border-border bg-card-elevated px-3 py-2 text-sm outline-none focus:border-primary/50" />
               </Field>
-              <Field label="Head back at">
+              <Field label="Off at (leave destination)">
                 <input type="time" value={prefs.commuteBack}
                   onChange={e => update({ ...prefs, commuteBack: e.target.value })}
                   className="w-full rounded-lg border border-border bg-card-elevated px-3 py-2 text-sm outline-none focus:border-primary/50" />
@@ -240,6 +240,9 @@ function RiskRow({ title, risk }: { title: string; risk: ReturnType<typeof commu
         <span>{title}</span>{icon}
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{risk.detail}</p>
+      {risk.advice && (
+        <p className="mt-1 text-xs text-primary">{risk.advice}</p>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Stars, Moon, Sparkles, Cloud, Telescope, Loader2, Orbit } from "lucide-
 import { AuroraFX, MeteorFX, AnimatedMoon } from "./fx/WeatherFX";
 import { visiblePlanets } from "@/lib/planets";
 import { compass as compassDir } from "@/lib/astronomy";
+import { SkyNowCard } from "./SkyNowCard";
 
 export function StargazingView({ conditions }: { conditions: LocationConditions }) {
   const { weather, location } = conditions;
@@ -33,6 +34,9 @@ export function StargazingView({ conditions }: { conditions: LocationConditions 
       <div className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Stargazing · {location.name}
       </div>
+
+      {/* What's overhead right now — cloud cover + sun/moon position. */}
+      <SkyNowCard conditions={conditions} />
 
       {/* Tonight's outlook */}
       <div className="glass-card p-5 shadow-card">
