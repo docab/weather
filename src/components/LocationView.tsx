@@ -5,9 +5,9 @@ import { HourlyStrip } from "./HourlyStrip";
 import { PollenCard } from "./PollenCard";
 import { AqiCard } from "./AqiCard";
 import { AlertsList } from "./AlertsList";
-import { SkyNowCard } from "./SkyNowCard";
 import { WeatherRadarCard } from "./WeatherRadarCard";
 import { NowcastStrip } from "./NowcastStrip";
+import { SmartAlertsCard } from "./SmartAlertsCard";
 
 export function LocationView({ conditions }: { conditions: LocationConditions }) {
   return (
@@ -17,14 +17,14 @@ export function LocationView({ conditions }: { conditions: LocationConditions })
         <AlertsList alerts={conditions.weather.alerts} />
       )}
       <NarrativeCard conditions={conditions} />
-      <NowcastStrip conditions={conditions} />
-      <WeatherRadarCard conditions={conditions} />
-      <SkyNowCard conditions={conditions} />
       <HourlyStrip weather={conditions.weather} />
+      <NowcastStrip conditions={conditions} />
+      <SmartAlertsCard conditions={conditions} />
       <div className="grid gap-4 md:grid-cols-2">
         <PollenCard pollen={conditions.pollen} />
         <AqiCard aqi={conditions.aqi} />
       </div>
+      <WeatherRadarCard conditions={conditions} />
     </div>
   );
 }
