@@ -240,6 +240,45 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   const d = j.daily;
   const hourly = j.hourly;
 
+  // Open-Meteo sometimes returns thunderstorm codes (95/96/99) for hot,
+  // unstable air masses (e.g. summertime Gulf, Sahara) even when the model
+  // shows 0% precipitation probability and 0mm rainfall — a "phantom storm".
+  // Downgrade those to a realistic dry-sky code so the UI doesn't shout
+  // "thunderstorms" over a cloudless desert day.
+  const sanitiseCode = (code: number, prob: number, mm = 0, cloud = 0): number => {
+    if (code >= 95 && prob < 30 && mm < 0.2) {
+      // No moisture backing the storm flag — fall back to cloud cover.
+      if (cloud >= 85) return 3;   // overcast
+      if (cloud >= 40) return 2;   // partly cloudy
+      return 1;                    // mainly clear
+    }
+    return code;
+  };
+
+  // Sanitise hourly + daily codes in place so every consumer (hero, hourly
+  // strip, 7-day forecast, smart alerts) sees the cleaned values.
+  for (let i = 0; i < hourly.weather_code.length; i++) {
+    hourly.weather_code[i] = sanitiseCode(
+      hourly.weather_code[i],
+      hourly.precipitation_probability?.[i] ?? 0,
+      0,
+      hourly.cloud_cover?.[i] ?? 0,
+    );
+  }
+  for (let i = 0; i < d.weather_code.length; i++) {
+    d.weather_code[i] = sanitiseCode(
+      d.weather_code[i],
+      d.precipitation_probability_max?.[i] ?? 0,
+      d.precipitation_sum?.[i] ?? 0,
+    );
+  }
+  c.weather_code = sanitiseCode(
+    c.weather_code,
+    hourly.precipitation_probability?.[0] ?? 0,
+    Math.max(c.rain ?? 0, c.precipitation ?? 0),
+    c.cloud_cover ?? 0,
+  );
+
   // Find current hour index in hourly
   const nowMs = Date.now();
   let startIdx = 0;
