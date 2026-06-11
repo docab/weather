@@ -252,6 +252,18 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
       if (cloud >= 40) return 2;   // partly cloudy
       return 1;                    // mainly clear
     }
+    // Same trick for drizzle (51/53/55), light–moderate rain (61/63),
+    // freezing drizzle/rain (56/57/66/67), and rain showers (80/81/82).
+    // Open-Meteo flags these on hot, dry days (e.g. summer in Faisalabad,
+    // Riyadh, Phoenix) when humidity dips trigger the precipitation model
+    // even though precip probability is ~0% and no mm are forecast.
+    const phantomWet =
+      (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+    if (phantomWet && prob < 25 && mm < 0.2) {
+      if (cloud >= 85) return 3;
+      if (cloud >= 40) return 2;
+      return 1;
+    }
     return code;
   };
 
