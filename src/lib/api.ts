@@ -221,7 +221,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility"
   ].join(","));
   url.searchParams.set("hourly", [
-    "temperature_2m", "apparent_temperature", "precipitation_probability", "weather_code", "cloud_cover"
+    "temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation", "weather_code", "cloud_cover"
   ].join(","));
   url.searchParams.set("daily", [
     "temperature_2m_max", "temperature_2m_min", "precipitation_probability_max",
@@ -240,31 +240,24 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   const d = j.daily;
   const hourly = j.hourly;
 
-  // Open-Meteo sometimes returns thunderstorm codes (95/96/99) for hot,
-  // unstable air masses (e.g. summertime Gulf, Sahara) even when the model
-  // shows 0% precipitation probability and 0mm rainfall — a "phantom storm".
-  // Downgrade those to a realistic dry-sky code so the UI doesn't shout
-  // "thunderstorms" over a cloudless desert day.
+  // Open-Meteo routinely emits "phantom" wet codes (drizzle 51–57, rain
+  // 61–67, showers 80–82, thunderstorms 95–99) backed by trace amounts
+  // (0.0–0.1 mm) or low probability — common over hot/dry regions (Muscat,
+  // Faisalabad, Riyadh, Phoenix). Instead of trusting the code, demand real
+  // moisture behind it; otherwise derive a dry-sky code from cloud cover.
+  const dryCode = (cloud: number): number =>
+    cloud >= 85 ? 3 : cloud >= 40 ? 2 : cloud >= 15 ? 1 : 0;
   const sanitiseCode = (code: number, prob: number, mm = 0, cloud = 0): number => {
-    if (code >= 95 && prob < 30 && mm < 0.2) {
-      // No moisture backing the storm flag — fall back to cloud cover.
-      if (cloud >= 85) return 3;   // overcast
-      if (cloud >= 40) return 2;   // partly cloudy
-      return 1;                    // mainly clear
-    }
-    // Same trick for drizzle (51/53/55), light–moderate rain (61/63),
-    // freezing drizzle/rain (56/57/66/67), and rain showers (80/81/82).
-    // Open-Meteo flags these on hot, dry days (e.g. summer in Faisalabad,
-    // Riyadh, Phoenix) when humidity dips trigger the precipitation model
-    // even though precip probability is ~0% and no mm are forecast.
-    const phantomWet =
-      (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
-    if (phantomWet && prob < 25 && mm < 0.2) {
-      if (cloud >= 85) return 3;
-      if (cloud >= 40) return 2;
-      return 1;
-    }
-    return code;
+    const wet = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
+    if (!wet) return code;
+    // Probability this low means the model itself doesn't believe it.
+    if (prob < 20 && mm < 0.4) return dryCode(cloud);
+    // Heavier categories need real water to back them up.
+    const heavy = (code >= 63 && code <= 67) || code === 81 || code === 82 || code >= 95;
+    if (mm >= (heavy ? 0.5 : 0.2)) return code;
+    // Light codes survive only with confident probability + measurable rain.
+    if (prob >= 60 && mm >= 0.1) return code;
+    return dryCode(cloud);
   };
 
   // Sanitise hourly + daily codes in place so every consumer (hero, hourly
@@ -273,16 +266,38 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     hourly.weather_code[i] = sanitiseCode(
       hourly.weather_code[i],
       hourly.precipitation_probability?.[i] ?? 0,
-      0,
+      hourly.precipitation?.[i] ?? 0,
       hourly.cloud_cover?.[i] ?? 0,
     );
   }
+  // Rebuild every daily code from that day's *sanitised* daytime hours so
+  // a single phantom hour can no longer brand a whole day "thunderstorm".
+  const hourIdxByDay = new Map<string, number[]>();
+  for (let i = 0; i < hourly.time.length; i++) {
+    const day = hourly.time[i].slice(0, 10);
+    const hr = parseInt(hourly.time[i].slice(11, 13), 10);
+    if (hr < 6 || hr > 21) continue;
+    const arr = hourIdxByDay.get(day) ?? [];
+    arr.push(i);
+    hourIdxByDay.set(day, arr);
+  }
   for (let i = 0; i < d.weather_code.length; i++) {
-    d.weather_code[i] = sanitiseCode(
-      d.weather_code[i],
-      d.precipitation_probability_max?.[i] ?? 0,
-      d.precipitation_sum?.[i] ?? 0,
-    );
+    const idxs = hourIdxByDay.get(d.time[i]) ?? [];
+    if (idxs.length) {
+      const significant = idxs.map(k => hourly.weather_code[k]).filter(c => c >= 45);
+      if (significant.length) {
+        d.weather_code[i] = Math.max(...significant);
+      } else {
+        const meanCloud = idxs.reduce((s, k) => s + (hourly.cloud_cover?.[k] ?? 0), 0) / idxs.length;
+        d.weather_code[i] = dryCode(meanCloud);
+      }
+    } else {
+      d.weather_code[i] = sanitiseCode(
+        d.weather_code[i],
+        d.precipitation_probability_max?.[i] ?? 0,
+        d.precipitation_sum?.[i] ?? 0,
+      );
+    }
   }
   c.weather_code = sanitiseCode(
     c.weather_code,
