@@ -199,9 +199,9 @@ const Index = () => {
         {allLocations.length > 0 && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-6 glass-card text-xs">
-              <TabsTrigger value="briefing" className="px-1">Now</TabsTrigger>
-              <TabsTrigger value="today" className="px-1">Today</TabsTrigger>
-              <TabsTrigger value="forecast" className="px-1">7-day</TabsTrigger>
+              <TabsTrigger value="briefing" className="px-1">Glance</TabsTrigger>
+              <TabsTrigger value="today" className="px-1">Now</TabsTrigger>
+              <TabsTrigger value="forecast" className="px-1">Forecast</TabsTrigger>
               <TabsTrigger value="stars" className="px-1">Sky</TabsTrigger>
               <TabsTrigger value="me" className="px-1">Me</TabsTrigger>
               <TabsTrigger value="travel" className="px-1">Travel</TabsTrigger>

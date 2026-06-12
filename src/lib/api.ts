@@ -314,7 +314,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   }
 
   const next: WeatherHour[] = [];
-  for (let i = startIdx; i < Math.min(hourly.time.length, startIdx + 12); i++) {
+  // Keep ~36 hours so consumers can build a 24-hour strip AND look ahead into
+  // the evening/overnight windows for smart alerts and overnight planning.
+  for (let i = startIdx; i < Math.min(hourly.time.length, startIdx + 36); i++) {
     next.push({
       time: hourly.time[i],
       temp: hourly.temperature_2m[i],
