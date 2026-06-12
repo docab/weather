@@ -28,6 +28,14 @@ export function NowcastStrip({ conditions }: { conditions: LocationConditions })
   const wetNow = (data.points[0]?.mm ?? 0) >= 0.05;
   const tz = conditions.weather.timezone;
 
+  // Only surface this card when there is something rain-related to say in the
+  // next ~2 hours. If it's dry now and dry the whole horizon, hide it — no
+  // need to advertise "staying dry". Also kills the perceived "blinking" from
+  // the card flipping between dry/wet messages on every poll.
+  const hasIncoming = data.startsInMin !== null;
+  const hasEasing = wetNow && data.stopsInMin !== null;
+  if (!wetNow && !hasIncoming) return null;
+
   let headline: { icon: React.ReactNode; text: string; tone: string };
   if (data.startsInMin !== null) {
     const t = new Date(Date.now() + data.startsInMin * 60_000)
@@ -42,19 +50,16 @@ export function NowcastStrip({ conditions }: { conditions: LocationConditions })
     headline = { icon: <CloudRain className="h-4 w-4" />,
       text: `Rain easing ~${t} (${humanise(data.stopsInMin)})`,
       tone: "text-primary" };
-  } else if (wetNow) {
+  } else {
     headline = { icon: <Droplet className="h-4 w-4" />,
       text: "Rain set in for the next couple of hours", tone: "text-primary" };
-  } else {
-    headline = { icon: <Sparkles className="h-4 w-4" />,
-      text: "Staying dry for the next 2 hours", tone: "text-foreground/80" };
   }
 
   const conf = Math.round(data.confidence * 100);
   const sourceLabel = data.source === "met" ? "MET Norway nowcast" : "Open-Meteo 15-min";
 
   return (
-    <div className="glass-card p-4 shadow-card animate-fade-in">
+    <div className="glass-card p-4 shadow-card">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className={`flex items-center gap-2 text-sm font-semibold ${headline.tone}`}>
           {headline.icon}<span>{headline.text}</span>

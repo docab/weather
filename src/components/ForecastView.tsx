@@ -1,36 +1,11 @@
 import type { LocationConditions } from "@/lib/types";
 import { describeWeather } from "@/lib/weatherCodes";
 import { CloudRain, Sun, Wind } from "lucide-react";
+import { dayGradient } from "@/lib/dayGradient";
 
 interface Props {
   conditions: LocationConditions;
 }
-
-/** Sky-temperature gradient. No greens, no teals — only the hues you'd
- *  actually see in the sky at that temperature/condition. */
-function dayGradient(highC: number, sky: string): string {
-  // Temperature anchor on the warm/cool axis (deep indigo → red).
-  const t = Math.max(-10, Math.min(38, highC));
-  // Hue stops: -10 → 235 (deep blue), 5 → 215 (steel blue), 14 → 205 (pale sky blue),
-  // 22 → 45 (warm yellow), 28 → 28 (orange), 35 → 8 (red).
-  let hue: number, sat: number, light: number;
-  if (t < 5)        { hue = lerp(235, 215, (t + 10) / 15); sat = 55; light = 32; }
-  else if (t < 14)  { hue = lerp(215, 205, (t - 5) / 9);    sat = 50; light = 42; }
-  else if (t < 22)  { hue = lerp(205, 45,  (t - 14) / 8);   sat = 55; light = 48; }
-  else if (t < 28)  { hue = lerp(45, 28,   (t - 22) / 6);   sat = 80; light = 52; }
-  else              { hue = lerp(28, 8,    (t - 28) / 7);   sat = 85; light = 50; }
-
-  // Sky modifier: rain & overcast pull saturation down and lighten/darken.
-  if (sky === "rain")   { sat -= 25; light -= 6; }
-  if (sky === "cloudy") { sat -= 18; light -= 2; }
-  if (sky === "snow")   { sat = 12; light = 70; hue = 210; }
-
-  const a = `hsl(${hue} ${clamp(sat, 8, 95)}% ${clamp(light, 18, 78)}% / 0.55)`;
-  const b = `hsl(${hue} ${clamp(sat - 10, 6, 90)}% ${clamp(light - 10, 12, 70)}% / 0.18)`;
-  return `linear-gradient(90deg, ${a} 0%, ${b} 60%, transparent 100%)`;
-}
-function lerp(a: number, b: number, t: number) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
-function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
 /**
  * 7-day forecast for the active location, written in plain language.
