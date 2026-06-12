@@ -4,10 +4,11 @@ import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { severityRank } from "@/lib/severity";
 import {
   Plane, Calendar, Loader2, MapPin, Locate, Train, Backpack, Route,
-  Clock, Navigation, Luggage,
+  Clock, Navigation, Luggage, Car, AlertTriangle,
 } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { LocalTimeCard } from "./LocalTimeCard";
+import { nearestAirport, distanceKmTo, type Airport } from "@/lib/airports";
 
 interface Props {
   locations: Location[];
@@ -95,6 +96,10 @@ export function TravelView({ locations, queries }: Props) {
         <>
           {/* The journey itself — distance, mode, ETA, en-route weather */}
           <JourneyCard origin={origin} destination={destination} />
+
+          {/* Road & driving conditions for the actual door-to-door drive,
+              broken into airport legs when flying. */}
+          <RoadConditionsCard origin={origin} destination={destination} />
 
           {/* Destination weather AT YOUR ARRIVAL TIME (not "now") */}
           <ArrivalCard origin={origin} destination={destination} />
