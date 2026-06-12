@@ -480,3 +480,100 @@ function haversineKm(a: Location, b: Location): number {
   const x = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(x));
 }
+
+// ----- Road & driving conditions -----
+
+function RoadConditionsCard({ origin, destination }: { origin: LocationConditions; destination: LocationConditions }) {
+  const mode = pickMode(origin.location, destination.location);
+
+  if (mode.mode === "flight") {
+    const origAir = nearestAirport(origin.location.latitude, origin.location.longitude, origin.location.countryCode);
+    const destAir = nearestAirport(destination.location.latitude, destination.location.longitude, destination.location.countryCode);
+    const legs: { from: string; to: string; km: number; weather: LocationConditions; airport: Airport | null }[] = [];
+    if (origAir) {
+      legs.push({
+        from: addressOf(origin.location),
+        to: `${origAir.iata} (${origAir.name})`,
+        km: distanceKmTo(origin.location.latitude, origin.location.longitude, origAir),
+        weather: origin,
+        airport: origAir,
+      });
+    }
+    if (destAir) {
+      legs.push({
+        from: `${destAir.iata} (${destAir.name})`,
+        to: addressOf(destination.location),
+        km: distanceKmTo(destination.location.latitude, destination.location.longitude, destAir),
+        weather: destination,
+        airport: destAir,
+      });
+    }
+    if (!legs.length) return null;
+
+    return (
+      <SectionCard icon={<Car className="h-3.5 w-3.5 text-primary" />} title="Road conditions — airport transfers">
+        <ul className="space-y-3">
+          {legs.map((l, i) => (
+            <li key={i} className="rounded-xl bg-secondary/40 p-3">
+              <div className="mb-1 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="truncate">{l.from} → {l.to}</span>
+                <span className="shrink-0 tabular">{Math.round(l.km)} km</span>
+              </div>
+              <p className="text-sm leading-relaxed text-foreground/95">{roadStory(l.weather, l.km)}</p>
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
+    );
+  }
+
+  // Ground journey — single direct leg.
+  const km = haversineKm(origin.location, destination.location);
+  return (
+    <SectionCard icon={<Car className="h-3.5 w-3.5 text-primary" />} title="Road conditions — door to door">
+      <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="truncate">{addressOf(origin.location)} → {addressOf(destination.location)}</span>
+        <span className="shrink-0 tabular">{Math.round(km)} km</span>
+      </div>
+      <p className="text-sm leading-relaxed text-foreground/95">{roadStory(origin, km, destination)}</p>
+    </SectionCard>
+  );
+}
+
+function addressOf(l: Location): string {
+  if (l.postcode) return `${l.postcode}${l.customName ? ` (${l.customName})` : ""}`;
+  return l.customName || l.name;
+}
+
+/** Build a plain-English road-conditions narrative from a location's
+ *  current weather (and optionally a destination's weather for long-leg
+ *  journeys). Uses concrete numbers — rain mm, gust mph, visibility, UV. */
+function roadStory(c: LocationConditions, km: number, dest?: LocationConditions): string {
+  const w = c.weather;
+  const bits: string[] = [];
+  const wet = w.precipProb >= 40 || (w.rainTotal ?? 0) >= 1;
+  const heavyWet = w.precipProb >= 70 || (w.rainTotal ?? 0) >= 4;
+  const cold = w.feelsLike <= 2;
+  const icy = cold && wet;
+  const gusty = w.windGust >= 35 || w.windSpeed >= 25;
+  const lowVis = (w.visibility ?? 10000) < 2000;
+
+  if (icy)        bits.push(`Icy risk — surface temperature is around ${Math.round(w.feelsLike)}° with active precipitation. Black ice on bridges and slip roads early morning.`);
+  else if (heavyWet) bits.push(`Heavy rain (${Math.round(w.precipProb)}% chance, ${(w.rainTotal ?? 0).toFixed(1)} mm so far). Standing water on hard shoulders; aquaplaning risk above 50 mph.`);
+  else if (wet)   bits.push(`Wet roads expected — ${Math.round(w.precipProb)}% rain chance. Spray reduces visibility; add 2× braking distance.`);
+  else            bits.push(`Dry tarmac with ${Math.round(w.precipProb)}% rain chance — straightforward driving.`);
+
+  if (gusty)      bits.push(`Gusts to ${Math.round(w.windGust)} mph — high-sided vehicles, motorbikes and trailers will feel it on exposed bridges.`);
+  if (lowVis)     bits.push(`Visibility down to ${(w.visibility! / 1000).toFixed(1)} km — dipped headlights on, fog lights if it drops further.`);
+  if (w.uvIndex >= 7 && w.isDay) bits.push(`Sun is strong (UV ${Math.round(w.uvIndex)}) — keep shades within reach for low-angle glare.`);
+  if (km >= 200)  bits.push(`Plan a comfort stop every ~150 km on a leg this long.`);
+
+  if (dest) {
+    const dw = dest.weather;
+    const arrivingWet = dw.precipProb >= 50;
+    if (arrivingWet && !wet) bits.push(`Conditions deteriorate near ${displayName(dest.location)} — ${Math.round(dw.precipProb)}% rain on arrival, drop your speed for the last 20 km.`);
+    else if (!arrivingWet && wet) bits.push(`Rain clears as you approach ${displayName(dest.location)}.`);
+  }
+
+  return bits.join(" ");
+}
