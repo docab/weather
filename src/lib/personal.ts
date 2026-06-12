@@ -2,6 +2,9 @@ import type { WeatherData, WeatherHour } from "./types";
 
 export type ActivityKey = "run" | "cycle" | "walk" | "garden" | "photo" | "dining";
 export type CommuteMode = "drive" | "cycle" | "walk" | "transit";
+export type HealthFlag = "asthma" | "hayfever" | "migraine" | "arthritis" | "eczema" | "heart" | "pregnancy";
+export type HouseholdFlag = "dog" | "kids" | "plants" | "garden" | "car_outside";
+export type Units = "metric" | "imperial";
 
 export interface PersonalPrefs {
   name?: string;
@@ -16,6 +19,19 @@ export interface PersonalPrefs {
   windTolerance: number;
   /** % chance — flagged as risky above this */
   rainTolerance: number;
+  /** Health considerations that should colour advice (asthma → air quality,
+   *  migraine → pressure swings, etc.) */
+  health: HealthFlag[];
+  /** Household setup — surfaces dog-walking windows, plant frost warnings,
+   *  windscreen icing tips. */
+  household: HouseholdFlag[];
+  /** Bedtime in 24h local — used for "tonight" overnight advice. */
+  bedtime: string;
+  /** Wake time in 24h local — used for the morning briefing window. */
+  wakeTime: string;
+  /** Display units. The app is metric throughout today, but this is
+   *  carried for forward compatibility and to colour any prose. */
+  units: Units;
 }
 
 const KEY = "pw.personal.v1";
@@ -27,6 +43,11 @@ export const defaultPersonalPrefs: PersonalPrefs = {
   tempSensitivity: 0,
   windTolerance: 25,
   rainTolerance: 40,
+  health: [],
+  household: [],
+  bedtime: "23:00",
+  wakeTime: "07:00",
+  units: "metric",
 };
 
 export function loadPersonalPrefs(): PersonalPrefs {
@@ -47,6 +68,95 @@ export const ACTIVITY_LABEL: Record<ActivityKey, string> = {
 export const ACTIVITY_ICON: Record<ActivityKey, string> = {
   run: "🏃", cycle: "🚴", walk: "🚶", garden: "🌱", photo: "📷", dining: "🍷",
 };
+
+export const HEALTH_LABEL: Record<HealthFlag, string> = {
+  asthma: "Asthma", hayfever: "Hay fever", migraine: "Migraines",
+  arthritis: "Joint pain", eczema: "Eczema / dry skin",
+  heart: "Heart condition", pregnancy: "Pregnancy",
+};
+export const HEALTH_ICON: Record<HealthFlag, string> = {
+  asthma: "🫁", hayfever: "🤧", migraine: "🤕",
+  arthritis: "🦴", eczema: "🧴", heart: "❤️", pregnancy: "🤰",
+};
+
+export const HOUSEHOLD_LABEL: Record<HouseholdFlag, string> = {
+  dog: "I have a dog",
+  kids: "I have young kids",
+  plants: "I keep outdoor plants",
+  garden: "I do garden / DIY",
+  car_outside: "My car parks outside",
+};
+export const HOUSEHOLD_ICON: Record<HouseholdFlag, string> = {
+  dog: "🐕", kids: "👶", plants: "🪴", garden: "🌷", car_outside: "🚗",
+};
+
+/** Surface health-aware advice as bite-sized lines tied to *today's*
+ *  weather. Pure functions over the WeatherData snapshot — never
+ *  generic boiler-plate. */
+export function healthAdvice(prefs: PersonalPrefs, weather: WeatherData,
+  air: { aqiIndex: number; pollenLevel: string }): string[] {
+  const out: string[] = [];
+  const w = weather;
+  for (const flag of prefs.health) {
+    if (flag === "asthma") {
+      if (air.aqiIndex >= 50 || w.humidity >= 85) out.push(`Air's heavy (AQI ${air.aqiIndex}, humidity ${Math.round(w.humidity)}%) — keep a reliever inhaler within reach today.`);
+      if (w.feelsLike <= 2) out.push(`Cold air can trigger wheeze — scarf over the mouth on the walk out and warm up indoors before exercise.`);
+    }
+    if (flag === "hayfever") {
+      if (["high", "very-high"].includes(air.pollenLevel)) out.push(`Pollen is ${air.pollenLevel} today — antihistamine before you head out, sunglasses to keep it out of your eyes.`);
+      if (w.windSpeed >= 18) out.push(`Wind is shaking pollen loose (${Math.round(w.windSpeed)} mph) — shower and change clothes when you get home.`);
+    }
+    if (flag === "migraine") {
+      if (w.uvIndex >= 7 || (w.humidity >= 80 && w.feelsLike >= 24)) out.push(`Bright/humid combo today — known migraine trigger. Hydrate early and keep sunglasses on.`);
+    }
+    if (flag === "arthritis") {
+      if (w.feelsLike <= 6) out.push(`Cold + damp will stiffen joints — extra warm-up time today, and a base layer keeps you moving easier.`);
+    }
+    if (flag === "eczema") {
+      if (w.humidity <= 35) out.push(`Dry air (humidity ${Math.round(w.humidity)}%) — moisturise after washing up and before stepping out.`);
+      if (w.feelsLike >= 26) out.push(`Sweat will flare things — loose cotton, frequent rinses.`);
+    }
+    if (flag === "heart") {
+      if (w.feelsLike <= 0 || w.feelsLike >= 30) out.push(`Temperature extremes are hard on the cardiovascular system — pace yourself today and skip the heavy chores.`);
+    }
+    if (flag === "pregnancy") {
+      if (w.feelsLike >= 26) out.push(`Heat hits harder when pregnant — sit in shade for 5 min every half hour, water bottle within reach.`);
+      if (w.feelsLike <= 2) out.push(`Slippery cold underfoot — flat soles with grip today, and a hand on the rail.`);
+    }
+  }
+  return out;
+}
+
+/** Household-flavoured advice: dog walks, plant frost, car ice etc. */
+export function householdAdvice(prefs: PersonalPrefs, weather: WeatherData): string[] {
+  const out: string[] = [];
+  const w = weather;
+  for (const flag of prefs.household) {
+    if (flag === "dog") {
+      if (w.feelsLike >= 24) out.push(`Pavements get hot — back of hand on the tarmac test. Walk the dog before 9am or after 7pm.`);
+      else if (w.feelsLike <= 0) out.push(`Salt and grit irritate paws — wipe down on return, balm if it cracks.`);
+      else if (w.precipProb >= 60) out.push(`Plenty of rain coming — towel by the door and a quick towel-down at the porch.`);
+    }
+    if (flag === "kids") {
+      if (w.uvIndex >= 6) out.push(`UV is ${Math.round(w.uvIndex)} — SPF 50 on little ones, hat for the buggy.`);
+      if (w.feelsLike <= 4) out.push(`Layer up the kids — hat, gloves and a snack to keep blood sugar up against the chill.`);
+    }
+    if (flag === "plants") {
+      if (w.feelsLike <= 2) out.push(`Bring tender plants indoors or cover with fleece — frost expected.`);
+      if (w.windGust >= 35) out.push(`Tie back climbers and move pots away from the edge — gusts to ${Math.round(w.windGust)} mph.`);
+    }
+    if (flag === "garden") {
+      if (w.precipProb >= 60) out.push(`Soil will be saturated — skip the strimmer and lawn mowing today.`);
+      if (w.uvIndex >= 7) out.push(`Strong sun for garden work — gloves, hat, water break every 45 min.`);
+    }
+    if (flag === "car_outside") {
+      if (w.feelsLike <= 1) out.push(`Frost expected — add 5 min in the morning for de-icing, or cover the windscreen tonight.`);
+      if (w.windGust >= 50) out.push(`Severe gusts — move the car away from trees or large branches if you can.`);
+      if (w.feelsLike >= 30) out.push(`Cabin will be furnace-hot — pop the windows the moment you get in, AC on full for 30 sec before driving.`);
+    }
+  }
+  return out;
+}
 
 /** Ideal temperature window per activity, before personal offset. */
 const IDEAL: Record<ActivityKey, [number, number]> = {

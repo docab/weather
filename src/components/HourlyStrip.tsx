@@ -3,12 +3,13 @@ import { describeWeather } from "@/lib/weatherCodes";
 import { CloudRain } from "lucide-react";
 
 export function HourlyStrip({ weather }: { weather: WeatherData }) {
+  const hours = weather.hourly.slice(0, 24);
   return (
     <div className="glass-card p-4 shadow-card">
-      <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Next 12 hours</div>
+      <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Next 24 hours</div>
       <div className="-mx-4 overflow-x-auto px-4 pb-1">
         <div className="flex gap-2">
-          {weather.hourly.map((h, i) => {
+          {hours.map((h, i) => {
             const info = describeWeather(h.weatherCode, true);
             const date = new Date(h.time);
             const hr = date.toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false }).replace(":00", "");
