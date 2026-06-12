@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CloudRain, Droplet, Umbrella, Sparkles } from "lucide-react";
+import { CloudRain, Droplet, Umbrella } from "lucide-react";
 import { fetchNowcast } from "@/lib/nowcast";
 import type { LocationConditions } from "@/lib/types";
 
@@ -32,9 +32,7 @@ export function NowcastStrip({ conditions }: { conditions: LocationConditions })
   // next ~2 hours. If it's dry now and dry the whole horizon, hide it — no
   // need to advertise "staying dry". Also kills the perceived "blinking" from
   // the card flipping between dry/wet messages on every poll.
-  const hasIncoming = data.startsInMin !== null;
-  const hasEasing = wetNow && data.stopsInMin !== null;
-  if (!wetNow && !hasIncoming) return null;
+  if (!wetNow && data.startsInMin === null) return null;
 
   let headline: { icon: React.ReactNode; text: string; tone: string };
   if (data.startsInMin !== null) {
