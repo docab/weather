@@ -218,10 +218,12 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set("current", [
     "temperature_2m", "apparent_temperature", "is_day", "precipitation",
     "rain", "weather_code", "wind_speed_10m", "wind_gusts_10m", "relative_humidity_2m",
-    "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility"
+    "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility",
+    "pressure_msl", "dew_point_2m"
   ].join(","));
   url.searchParams.set("hourly", [
-    "temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation", "weather_code", "cloud_cover"
+    "temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation",
+    "weather_code", "cloud_cover", "wind_speed_10m", "relative_humidity_2m"
   ].join(","));
   url.searchParams.set("daily", [
     "temperature_2m_max", "temperature_2m_min", "precipitation_probability_max",
@@ -230,7 +232,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   ].join(","));
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("wind_speed_unit", "mph");
-  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set("forecast_days", "10");
 
   const r = await fetch(url.toString());
   if (!r.ok) throw new Error("Weather fetch failed");
@@ -324,6 +326,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
       precipProb: hourly.precipitation_probability[i] ?? 0,
       weatherCode: hourly.weather_code[i],
       cloudCover: hourly.cloud_cover?.[i] ?? 0,
+      windSpeed: hourly.wind_speed_10m?.[i] ?? 0,
+      humidity: hourly.relative_humidity_2m?.[i] ?? 0,
+      precipMm: hourly.precipitation?.[i] ?? 0,
     });
   }
 
@@ -391,6 +396,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     cloudMid: c.cloud_cover_mid ?? 0,
     cloudHigh: c.cloud_cover_high ?? 0,
     visibility: c.visibility,
+    pressure: c.pressure_msl,
+    dewPoint: c.dew_point_2m,
+    precipMm: Math.max(c.rain ?? 0, c.precipitation ?? 0),
     hourly: next,
     daily: days,
     timezone: j.timezone || "auto",

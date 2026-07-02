@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LocationConditions, WeatherHour } from "@/lib/types";
 import { Bell, Sun, Cloud, CloudRain, CloudSnow, Wind, Thermometer, Moon, Umbrella, Droplets } from "lucide-react";
 import { dayGradient } from "@/lib/dayGradient";
@@ -16,8 +16,7 @@ export function SmartAlertsCard({ conditions }: { conditions: LocationConditions
     const id = setInterval(() => tick(t => t + 1), 15 * 60_000);
     return () => clearInterval(id);
   }, []);
-
-  const alerts = buildAlerts(conditions);
+  const alerts = useMemo(() => buildPatternAlerts(conditions), [conditions]);
   if (!alerts.length) return null;
 
   return (
@@ -314,3 +313,117 @@ function rainAnalogy(pct: number): string {
 }
 
 export function SnowIcon() { return <CloudSnow className="h-4 w-4" />; }
+
+/**
+ * Pattern-grouped alerts: cluster contiguous upcoming hours by weather
+ * "character" (wet / hot / cold / windy / calm), then emit one alert per
+ * cluster describing the window and how it'll change. Drops any window
+ * whose end has already passed. Prefixes tomorrow's clusters with the date.
+ */
+function buildPatternAlerts(c: LocationConditions): Alert[] {
+  const w = c.weather;
+  const tz = w.timezone;
+  const nowMs = Date.now();
+  const hours = w.hourly.filter(h => new Date(h.time).getTime() >= nowMs - 15 * 60_000).slice(0, 24);
+  if (!hours.length) return [];
+
+  type Sig = "rain-heavy" | "rain" | "hot" | "cold" | "windy" | "muggy" | "calm";
+  const sigOf = (h: WeatherHour): Sig => {
+    if (h.precipProb >= 70) return "rain-heavy";
+    if (h.precipProb >= 40) return "rain";
+    if (h.feelsLike >= 28) return "hot";
+    if (h.feelsLike <= 3) return "cold";
+    if ((h.windSpeed ?? w.windSpeed) >= 22) return "windy";
+    if ((h.humidity ?? w.humidity) >= 80 && h.feelsLike >= 20) return "muggy";
+    return "calm";
+  };
+
+  const clusters: { sig: Sig; hours: WeatherHour[] }[] = [];
+  for (const h of hours) {
+    const s = sigOf(h);
+    const last = clusters[clusters.length - 1];
+    if (last && last.sig === s) last.hours.push(h);
+    else clusters.push({ sig: s, hours: [h] });
+  }
+
+  // Merge stray 1h "calm" runs sandwiched between similar weather.
+  const merged: typeof clusters = [];
+  for (let i = 0; i < clusters.length; i++) {
+    const cur = clusters[i];
+    if (cur.sig === "calm" && cur.hours.length === 1 && merged.length && i + 1 < clusters.length && merged[merged.length - 1].sig === clusters[i + 1].sig) {
+      merged[merged.length - 1].hours.push(...cur.hours);
+      continue;
+    }
+    merged.push(cur);
+  }
+
+  const todayKey = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz }).format(new Date());
+
+  return merged.slice(0, 5).map((cl, idx): Alert => {
+    const first = cl.hours[0], last = cl.hours[cl.hours.length - 1];
+    const startH = fmtHour(first.time, tz);
+    const endH = fmtHour(new Date(new Date(last.time).getTime() + 3600_000).toISOString(), tz);
+    const keyStart = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz }).format(new Date(first.time));
+    const datePrefix = keyStart !== todayKey
+      ? ` · ${new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: tz }).format(new Date(first.time))}`
+      : "";
+    const isNow = idx === 0 && Math.abs(new Date(first.time).getTime() - nowMs) < 60 * 60_000;
+    const window = (isNow ? `NOW · ${endH}` : `${startH} – ${endH}`) + datePrefix.toUpperCase();
+
+    const feels = cl.hours.map(h => h.feelsLike);
+    const minF = Math.round(Math.min(...feels));
+    const maxF = Math.round(Math.max(...feels));
+    const peakRain = Math.max(...cl.hours.map(h => h.precipProb));
+    const dominantCode = cl.hours.reduce((a, x) => x.weatherCode > a.weatherCode ? x : a, cl.hours[0]).weatherCode;
+    const isDay = (() => {
+      const hh = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: tz }).format(new Date(first.time)));
+      return hh >= 6 && hh < 20;
+    })();
+    const skyInfo = describeWeather(dominantCode, isDay);
+    const gradient = dayGradient((minF + maxF) / 2, skyInfo.sky);
+
+    let text = ""; let icon: React.ReactNode = <Cloud className="h-4 w-4" />;
+    switch (cl.sig) {
+      case "rain-heavy":
+        text = `Heavy rain window — peaking ${Math.round(peakRain)}% chance. Waterproofs, not a brolly. Feels ${minF}–${maxF}°.`;
+        icon = <CloudRain className="h-4 w-4" />;
+        break;
+      case "rain":
+        text = `Showers likely, peaking ${Math.round(peakRain)}%. Keep a brolly close — feels ${minF}–${maxF}°.`;
+        icon = <Umbrella className="h-4 w-4" />;
+        break;
+      case "hot":
+        text = `Heat window — peaks ${maxF}°. Water bottle, shade between 12–3, SPF a must.`;
+        icon = <Sun className="h-4 w-4" />;
+        break;
+      case "cold":
+        text = `Cold snap — dips to ${minF}°. Base layer, gloves, warm-up before exertion.`;
+        icon = <Thermometer className="h-4 w-4" />;
+        break;
+      case "windy":
+        text = `Blustery — wind gusts up. Cheap brollies flip. A hood beats a hat.`;
+        icon = <Wind className="h-4 w-4" />;
+        break;
+      case "muggy":
+        text = `Muggy patch — humid and heavy at ${minF}–${maxF}°. Linen/cotton, sip water.`;
+        icon = <Droplets className="h-4 w-4" />;
+        break;
+      default: {
+        const tone = maxF >= 22 ? "pleasant" : maxF >= 12 ? "mild" : "chilly";
+        text = `Calm and ${tone} — feels ${minF}–${maxF}°, rain chance ${Math.round(peakRain)}%. Great window to be outside.`;
+        icon = maxF >= 22 ? <Sun className="h-4 w-4" /> : <Cloud className="h-4 w-4" />;
+      }
+    }
+    if (!isDay && cl.sig !== "cold") icon = <Moon className="h-4 w-4" />;
+
+    return { window, text, icon, gradient };
+  });
+}
+
+function fmtHour(iso: string, tz: string): string {
+  const d = new Date(iso);
+  const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: tz }).format(d));
+  const suffix = h >= 12 ? "pm" : "am";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}${suffix}`;
+}
