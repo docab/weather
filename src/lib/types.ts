@@ -49,6 +49,9 @@ export interface WeatherHour {
   precipProb: number;
   weatherCode: number;
   cloudCover?: number;
+  windSpeed?: number;
+  humidity?: number;
+  precipMm?: number;
 }
 
 export interface WeatherDay {
@@ -90,6 +93,9 @@ export interface WeatherData {
   cloudMid: number;
   cloudHigh: number;
   visibility?: number;
+  pressure?: number;   // hPa
+  dewPoint?: number;   // °C
+  precipMm?: number;   // current mm/h
   hourly: WeatherHour[];
   daily: WeatherDay[];
   alerts: WeatherAlert[];
