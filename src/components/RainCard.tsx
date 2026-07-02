@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { LocationConditions } from "@/lib/types";
 import { CloudRain, ChevronRight } from "lucide-react";
-import { RainFX } from "./fx/WeatherFX";
+import { Rain } from "./fx/WeatherFX";
 import { DetailModal, ExplainerBlock } from "./ui/detail-modal";
 import { explainPrecipProb, explainCloudCover, rainDescriptor } from "@/lib/explainers";
 
@@ -32,9 +32,14 @@ export function RainCard({ conditions }: { conditions: LocationConditions }) {
         onClick={() => setOpen(true)}
         className="glass-card group relative w-full overflow-hidden p-5 text-left shadow-card animate-fade-in-up transition hover:scale-[1.005]"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-70">
-          <RainFX intensity={nowRain ? clampIntensity(mm) : soon ? 0.2 : 0} />
-        </div>
+        {(nowRain || soon) && (
+          <div className="pointer-events-none absolute inset-0 opacity-70">
+            <Rain
+              category={mm >= 4 ? "heavy" : mm >= 1 ? "moderate" : mm > 0 ? "light" : "drizzle"}
+              intensity={nowRain ? clampIntensity(mm) : 0.35}
+            />
+          </div>
+        )}
         <div className="relative">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
