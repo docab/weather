@@ -3,6 +3,7 @@ import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp } from "lucide-react";
 import { WeatherFX, AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
 import { getMoonPhase } from "@/lib/astronomy";
+import { WindBranchFX } from "./fx/WindBranchFX";
 
 export function WeatherHero({ conditions }: { conditions: LocationConditions }) {
   const { weather } = conditions;
@@ -23,6 +24,8 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       })}
     >
       <WeatherFX weather={weather} />
+      {/* Frosted branch: sways with wind speed, always drawn behind text. */}
+      <WindBranchFX mph={weather.windSpeed} />
       {/* Time-of-day overlay — dawn / dusk warm wash, deep-night cool wash. */}
       {phaseOverlay && (
         <div className="pointer-events-none absolute inset-0" style={{ background: phaseOverlay }} />
@@ -66,10 +69,10 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
         </div>
 
         <div className="mt-5 grid grid-cols-4 gap-3">
-          <Stat icon={<CloudRain className="h-4 w-4" />} label="Rain" value={`${Math.round(weather.precipProb)}%`} />
-          <Stat icon={<Wind className="h-4 w-4" />} label="Wind" value={`${Math.round(weather.windSpeed)} mph`} />
-          <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} />
-          <Stat icon={<Sun className="h-4 w-4" />} label="UV" value={String(Math.round(weather.uvIndex))} />
+          <Stat icon={<CloudRain className="h-4 w-4" />} label="Rain" value={`${Math.round(weather.precipProb)}%`} anchor="rain" />
+          <Stat icon={<Wind className="h-4 w-4" />} label="Wind" value={`${Math.round(weather.windSpeed)} mph`} anchor="more" />
+          <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} anchor="more" />
+          <Stat icon={<Sun className="h-4 w-4" />} label="UV" value={String(Math.round(weather.uvIndex))} anchor="suggestions" />
         </div>
       </div>
     </div>
@@ -111,14 +114,18 @@ function sunPhaseOverlay(w: LocationConditions["weather"]): string | null {
   return null;
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Stat({ icon, label, value, anchor }: { icon: React.ReactNode; label: string; value: string; anchor?: string }) {
+  const onClick = anchor ? () => {
+    const el = document.getElementById(anchor);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  } : undefined;
   return (
-    <div className="glass-tile p-3">
+    <button onClick={onClick} type="button" className="glass-tile p-3 text-left transition hover:scale-[1.04]">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         <span className="text-[10px] font-semibold uppercase tracking-wider">{label}</span>
       </div>
       <div className="mt-1 text-base font-bold tabular">{value}</div>
-    </div>
+    </button>
   );
 }
