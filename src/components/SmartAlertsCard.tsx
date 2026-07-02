@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LocationConditions, WeatherHour } from "@/lib/types";
-import { Bell, Sun, Cloud, CloudRain, CloudSnow, Wind, Thermometer, Moon, Umbrella, Droplets } from "lucide-react";
+import { Bell, Sun, Cloud, CloudRain, CloudSnow, Wind, Thermometer, Moon, Umbrella } from "lucide-react";
 import { dayGradient } from "@/lib/dayGradient";
 import { describeWeather } from "@/lib/weatherCodes";
 
@@ -16,8 +16,7 @@ export function SmartAlertsCard({ conditions }: { conditions: LocationConditions
     const id = setInterval(() => tick(t => t + 1), 15 * 60_000);
     return () => clearInterval(id);
   }, []);
-
-  const alerts = buildAlerts(conditions);
+  const alerts = useMemo(() => buildPatternAlerts(conditions), [conditions]);
   if (!alerts.length) return null;
 
   return (
