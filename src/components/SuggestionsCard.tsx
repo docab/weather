@@ -17,8 +17,8 @@ export function SuggestionsCard({ conditions }: { conditions: LocationConditions
   const needUmbrella = w.precipProb >= 40;
   const sweat = sweatEstimate(w.feelsLike, w.humidity);
   const water = waterLine(w.feelsLike, w.humidity);
-  const antihist = prefs.health?.includes("hayfever") && conditions.pollen.risk !== "low"
-    ? `Pollen is ${conditions.pollen.risk} today — take your antihistamine before heading out.`
+  const antihist = prefs.health?.includes("hayfever") && conditions.pollen.level !== "low"
+    ? `Pollen is ${conditions.pollen.level} today — take your antihistamine before heading out.`
     : null;
   const smart = smartTips(conditions);
 
