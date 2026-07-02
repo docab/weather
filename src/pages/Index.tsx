@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { LiveBanner } from "@/components/LiveBanner";
 import { LocationTabs } from "@/components/LocationTabs";
 import { LocationView, LocationViewSkeleton } from "@/components/LocationView";
+import { Next2HoursCard } from "@/components/Next2HoursCard";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
 import { BriefingView } from "@/components/BriefingView";
 import { ForecastView } from "@/components/ForecastView";
@@ -167,6 +168,9 @@ const Index = () => {
         {bannerData && (
           <div className="mb-4">
             <LiveBanner conditions={bannerData} detailed={detailed} />
+            <div className="mt-2">
+              <Next2HoursCard conditions={bannerData} />
+            </div>
           </div>
         )}
 
