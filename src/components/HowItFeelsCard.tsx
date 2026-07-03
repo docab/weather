@@ -162,3 +162,40 @@ function adviceFor(sig: string, avg: number, hs: WeatherHour[]): string {
   if (sig === "partly") return avg >= 22 ? `Partly cloudy and pleasant — a great window to be outside.` : `Broken cloud, ${Math.round(avg)}° — jumper weather.`;
   return avg >= 26 ? `Clear and hot — SPF, hat, water bottle.` : avg >= 12 ? `Clear and pleasant — one of the best windows of the day.` : `Clear but chilly — coat weather, gloves if you're standing still long.`;
 }
+
+/**
+ * Indoor temp heuristic for un-air-conditioned rooms. Rooms lag outside
+ * by a few °C and hold onto yesterday's warmth — so we use the rolling
+ * 24h mean nudged toward today's peak in hot weather.
+ */
+function indoorRange(currentOutside: number, hours: WeatherHour[]): { low: number; high: number } {
+  const window = hours.slice(0, 24);
+  if (!window.length) return { low: currentOutside, high: currentOutside };
+  const mean = window.reduce((s, h) => s + h.temp, 0) / window.length;
+  const peak = Math.max(...window.map(h => h.temp));
+  const trough = Math.min(...window.map(h => h.temp));
+  // Well-insulated dwellings sit ~2–4°C above the 24h mean in summer
+  // and 1–2°C above the daily low in winter.
+  const summerBias = Math.max(0, (peak - 22) * 0.25);
+  const indoorLow = Math.round(Math.max(trough + 1, mean - 1) - 0.5);
+  const indoorHigh = Math.round(mean + 2 + summerBias);
+  return { low: indoorLow, high: indoorHigh };
+}
+
+function indoorEstimate(currentOutside: number, hours: WeatherHour[]): string {
+  const { low, high } = indoorRange(currentOutside, hours);
+  if (high >= 28) return `Rooms likely ${low}–${high}° — sticky, especially upstairs. Blinds down, fan on.`;
+  if (high >= 25) return `Rooms sit around ${low}–${high}° — warm but bearable. Cross-ventilate at night.`;
+  if (high >= 20) return `Comfortable indoors, ${low}–${high}°.`;
+  if (high >= 16) return `Cool-ish inside, ${low}–${high}° — cardigan weather at home.`;
+  return `Chilly rooms, ${low}–${high}° — heating on if you're sat still.`;
+}
+
+function indoorLongForm(currentOutside: number, hours: WeatherHour[]): string {
+  const { low, high } = indoorRange(currentOutside, hours);
+  const base = `Expect ${low}–${high}° in most rooms today. `;
+  if (high >= 30) return base + `Top-floor bedrooms can climb 2–3° hotter than that — close blinds by mid-morning, open windows once outside dips below inside.`;
+  if (high >= 26) return base + `South-facing rooms will feel warmest late afternoon. A cross-breeze at dusk drops it fast.`;
+  if (high <= 15) return base + `Rooms hold overnight cold — a quick burst of heating in the morning is more efficient than leaving it on low all day.`;
+  return base + `Nothing dramatic — the house will feel like the weather looks.`;
+}
