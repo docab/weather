@@ -1,7 +1,7 @@
 import type { LocationConditions } from "@/lib/types";
 import { getSunPosition, getMoonPosition, getMoonPhase, compass } from "@/lib/astronomy";
 import { Cloud, Eye } from "lucide-react";
-import { WeatherFX, AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
+import { WeatherFX } from "./fx/WeatherFX";
 
 /**
  * "What the sky looks like right now" — cloud cover layers,
@@ -38,23 +38,9 @@ export function SkyNowCard({ conditions }: { conditions: LocationConditions }) {
         <CloudLayer label="Low"  value={weather.cloudLow}  hint="stratus, fog" />
         <p className="mt-2 text-xs text-foreground/85">{cloudLine}</p>
       </div>
-
-      <div className="relative mt-4 grid gap-3 sm:grid-cols-2">
-        <Body
-          icon={<AnimatedSun size={28} warm={weather.feelsLike >= 22} />}
-          name="Sun"
-          state={sun.visible
-            ? `Up — ${Math.round(sun.altitude)}° above the ${compass(sun.azimuth)} horizon`
-            : `Below the horizon (${Math.round(sun.altitude)}°)`}
-        />
-        <Body
-          icon={<AnimatedMoon size={28} illumination={phase.illumination} phase={phase.phase} />}
-          name={`${phase.emoji} ${phase.name}`}
-          state={moon.visible
-            ? `Up — ${Math.round(moon.altitude)}° in the ${compass(moon.azimuth)}, ${Math.round(phase.illumination * 100)}% lit`
-            : `Below the horizon · ${Math.round(phase.illumination * 100)}% lit`}
-        />
-      </div>
+      <p className="relative mt-3 text-[11px] text-muted-foreground">
+        Sun & moon have their own cards below.
+      </p>
     </div>
   );
 }
