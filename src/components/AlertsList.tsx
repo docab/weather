@@ -55,6 +55,9 @@ export function AlertsList({ alerts }: { alerts: WeatherAlert[] }) {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-foreground/85">{a.description}</p>
+                <p className="mt-1.5 text-[10px] uppercase tracking-wider text-foreground/60">
+                  Issued via national feed · Met Office (UK) / MeteoAlarm / NWS
+                </p>
               </div>
             </div>
           </div>

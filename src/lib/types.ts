@@ -125,4 +125,7 @@ export interface NotificationPrefs {
   rainAlerts: boolean;
   alertsLastFired?: Record<string, string>;
   detailedLocation?: boolean;
+  weatherProvider?: WeatherProvider;
 }
+
+export type WeatherProvider = "open-meteo" | "yr-no" | "foreca" | "met-office" | "apple";

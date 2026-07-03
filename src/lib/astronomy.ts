@@ -121,3 +121,41 @@ export function compass(deg: number): string {
                 "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
   return dirs[Math.round(deg / 22.5) % 16];
 }
+
+/**
+ * Next date (UTC) after `from` when the moon reaches a target phase
+ * (0 = new, 0.5 = full). Coarse search — accurate to a few hours.
+ */
+export function nextMoonPhase(from: Date, target: 0 | 0.5): Date {
+  const step = 3600_000; // 1 hour steps
+  const horizon = 45 * 24; // 45 days is enough for any lunar phase
+  let prev = getMoonPhase(from).phase;
+  for (let i = 1; i <= horizon; i++) {
+    const t = new Date(from.getTime() + i * step);
+    const p = getMoonPhase(t).phase;
+    // Detect crossing target with wrap-around handling
+    const crossed = target === 0
+      ? (prev > 0.9 && p < 0.1) || (prev < 0.1 && p < prev)
+      : prev < 0.5 && p >= 0.5;
+    if (crossed) return t;
+    prev = p;
+  }
+  return new Date(from.getTime() + horizon * step);
+}
+
+/** Rough sun-event times for a day (rise/set/solar-noon) in local ISO. */
+export function sunEvents(date: Date, lat: number, lon: number) {
+  // Sample every 5 minutes across the day at the location's implied local UTC offset.
+  const start = new Date(date); start.setUTCHours(0, 0, 0, 0);
+  let rise: Date | null = null, set: Date | null = null, peak: Date | null = null, peakAlt = -Infinity;
+  let prevAlt = getSunPosition(start, lat, lon).altitude;
+  for (let m = 5; m <= 24 * 60; m += 5) {
+    const t = new Date(start.getTime() + m * 60_000);
+    const alt = getSunPosition(t, lat, lon).altitude;
+    if (!rise && prevAlt < 0 && alt >= 0) rise = t;
+    if (!set  && prevAlt > 0 && alt <= 0) set = t;
+    if (alt > peakAlt) { peakAlt = alt; peak = t; }
+    prevAlt = alt;
+  }
+  return { rise, set, peak, peakAltitude: peakAlt };
+}

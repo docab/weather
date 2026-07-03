@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeft, Bell, BellOff, Locate, MapPin, Star, StarOff, Trash2, Plus
+  ArrowLeft, Bell, BellOff, Locate, MapPin, Star, StarOff, Trash2, Plus, CloudSun
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
 } from "@/lib/storage";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
-import type { Location, NotificationPrefs, Severity } from "@/lib/types";
+import type { Location, NotificationPrefs, Severity, WeatherProvider } from "@/lib/types";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -67,7 +67,7 @@ export default function Settings() {
     const result = await Notification.requestPermission();
     if (result === "granted") {
       setPrefs(p => ({ ...p, enabled: true }));
-      new Notification("PollenWatch", {
+      new Notification("Weatherer", {
         body: "Notifications enabled — you'll get morning briefings.",
         icon: "/favicon.ico",
       });
@@ -239,7 +239,37 @@ export default function Settings() {
           </p>
         </Section>
 
-        <p className="text-center text-[10px] text-muted-foreground">v1.0 · PollenWatch</p>
+        {/* Weather data source */}
+        <Section title="Weather source" subtitle="Choose which service Weatherer prefers when it can. Doesn't rain outside? Nudge Weatherer to try another provider.">
+          <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <Row
+              label="Preferred provider"
+              hint="Weatherer will use this source when available and quietly fall back if it can't reach it."
+              icon={<CloudSun className="h-4 w-4" />}
+              control={
+                <Select
+                  value={prefs.weatherProvider ?? "open-meteo"}
+                  onValueChange={(v: WeatherProvider) => setPrefs(p => ({ ...p, weatherProvider: v }))}
+                >
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open-meteo">Open-Meteo (default)</SelectItem>
+                    <SelectItem value="yr-no">Yr.no (MET Norway)</SelectItem>
+                    <SelectItem value="foreca">Foreca</SelectItem>
+                    <SelectItem value="met-office">Met Office (UK)</SelectItem>
+                    <SelectItem value="apple">Apple Weather</SelectItem>
+                  </SelectContent>
+                </Select>
+              }
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Weatherer currently pulls global data from Open-Meteo, with Met Office / MeteoAlarm / NWS feeds for official warnings.
+              Additional providers are being wired in — your choice persists and takes effect as each is enabled.
+            </p>
+          </div>
+        </Section>
+
+        <p className="text-center text-[10px] text-muted-foreground">v1.1 · Weatherer</p>
       </main>
 
       <AddLocationDialog open={addOpen} onOpenChange={setAddOpen} onSelect={addLocation} />
