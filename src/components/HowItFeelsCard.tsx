@@ -37,6 +37,9 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
         </div>
         <p className="text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
         <p className="mt-3 text-sm text-foreground/85"><span className="font-semibold text-foreground">Next 2 hours:</span> {nextLine}</p>
+        <p className="mt-2 text-sm text-foreground/85">
+          <span className="font-semibold text-foreground">Indoors (no AC):</span> {indoorEstimate(w.temp, w.hourly)}
+        </p>
         <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
           Full day breakdown <ChevronRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
         </div>
@@ -44,6 +47,12 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
 
       <DetailModal open={open} onClose={() => setOpen(false)} title="How the day will feel">
         <p className="mb-4 text-sm leading-relaxed text-foreground/90">{conditions.narrative}</p>
+        <div className="mb-4 rounded-2xl border border-border/50 bg-secondary/40 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Indoor forecast (rooms without AC)
+          </div>
+          <p className="mt-1 text-sm text-foreground/90">{indoorLongForm(w.temp, w.hourly)}</p>
+        </div>
         <div className="space-y-2">
           {patterns.map((p, i) => {
             const info = describeWeather(p.dominantCode, p.isDay);
