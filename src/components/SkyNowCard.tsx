@@ -60,20 +60,6 @@ function CloudLayer({ label, value, hint }: { label: string; value: number; hint
   );
 }
 
-function Body({ icon, name, state }: { icon: React.ReactNode; name: string; state: string }) {
-  return (
-    <div className="flex gap-3 rounded-xl glass-tile p-3">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background/50 text-primary">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <div className="text-sm font-semibold">{name}</div>
-        <div className="text-xs text-muted-foreground">{state}</div>
-      </div>
-    </div>
-  );
-}
-
 function describeClouds(total: number, low: number, mid: number, high: number): string {
   if (total < 10) return "Practically nothing up there — pure sky.";
   if (total < 25) return `Mostly clear, just a wisp of ${dominantLayer(low, mid, high)}.`;
