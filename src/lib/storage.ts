@@ -44,6 +44,7 @@ export const defaultPrefs: NotificationPrefs = {
   aqiAlerts: true,
   rainAlerts: true,
   detailedLocation: false,
+  weatherProvider: "open-meteo",
 };
 
 export function loadPrefs(): NotificationPrefs {
