@@ -79,9 +79,13 @@ function DayExpansion({ day, conditions }: { day: string; conditions: LocationCo
   }, [day, conditions, tz]);
 
   if (!dayHours.length) {
+    // Fall back to a full-day narrative when hourly data isn't published this
+    // far ahead. Pulls temp/precip/wind/UV/pollen from the daily summary.
+    const dayEntry = conditions.weather.daily.find(x => x.date.slice(0, 10) === day.slice(0, 10));
+    if (!dayEntry) return null;
     return (
-      <div className="border-t border-border/40 bg-background/40 px-4 py-3 text-xs text-muted-foreground">
-        Hour-by-hour detail isn't available this far ahead — check back closer to the day.
+      <div className="border-t border-border/40 bg-background/40 p-4 text-xs leading-relaxed text-foreground/85 animate-fade-in-up">
+        <p>{longDayNarrative(dayEntry, conditions)}</p>
       </div>
     );
   }
