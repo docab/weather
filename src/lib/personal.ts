@@ -187,12 +187,20 @@ export function householdAdvice(prefs: PersonalPrefs, weather: WeatherData): str
 const IDEAL: Record<ActivityKey, [number, number]> = {
   run: [6, 16], cycle: [10, 22], walk: [8, 22],
   garden: [12, 24], photo: [4, 26], dining: [16, 26],
+  hike: [8, 22], swim: [18, 30], yoga: [15, 26],
+  tennis: [12, 24], football: [8, 20], golf: [12, 24],
+  gym: [4, 26], kids_play: [12, 24], birdwatch: [6, 22],
+  fish: [8, 22], picnic: [16, 26], market: [10, 24],
 };
 const RAIN_PENALTY: Record<ActivityKey, number> = {
   run: 1.0, cycle: 1.2, walk: 0.7, garden: 1.0, photo: 0.4, dining: 1.6,
+  hike: 1.1, swim: 0.3, yoga: 1.5, tennis: 1.8, football: 1.2, golf: 1.7,
+  gym: 0.3, kids_play: 1.4, birdwatch: 1.2, fish: 0.6, picnic: 1.7, market: 1.3,
 };
 const WIND_PENALTY: Record<ActivityKey, number> = {
   run: 0.7, cycle: 1.6, walk: 0.5, garden: 0.6, photo: 0.4, dining: 1.3,
+  hike: 0.7, swim: 1.2, yoga: 1.4, tennis: 1.6, football: 0.9, golf: 1.8,
+  gym: 0.1, kids_play: 0.9, birdwatch: 1.0, fish: 1.0, picnic: 1.5, market: 0.7,
 };
 
 function tempScore(t: number, ideal: [number, number], sens: number): number {
@@ -271,7 +279,8 @@ export function commuteRiskAt(
   const wind = weather.windSpeed;
   const t = closest.feelsLike;
   const isCold = t < 4, isHot = t > 28;
-  const mode = prefs.commuteMode;
+  const modes = prefs.commuteModes.length ? prefs.commuteModes : (["walk"] as CommuteMode[]);
+  const mode = modes[0];
 
   const flags: string[] = [];
   if (rain >= prefs.rainTolerance) flags.push(`${Math.round(rain)}% rain`);
@@ -285,6 +294,7 @@ export function commuteRiskAt(
 
   const modeLabel: Record<CommuteMode, string> = {
     drive: "drive", cycle: "ride", walk: "walk", transit: "trip",
+    motorcycle: "ride", wheelchair: "wheel",
   };
 
   const peakTime = new Date(peakRainHour.time).toLocaleTimeString("en-GB",
