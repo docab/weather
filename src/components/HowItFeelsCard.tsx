@@ -13,9 +13,6 @@ import { LocalTimeCard } from "./LocalTimeCard";
 export function HowItFeelsCard({ conditions }: { conditions: LocationConditions }) {
   const [open, setOpen] = useState(false);
   const w = conditions.weather;
-  const now = w.hourly[0];
-  const soon = w.hourly.slice(1, 3);
-  const nextLine = useMemo(() => buildNextLine(now, soon), [now, soon]);
   const patterns = useMemo(() => groupPatterns(w.hourly.slice(0, 24), w.timezone), [w]);
 
   return (
@@ -36,8 +33,7 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
           />
         </div>
         <p className="text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
-        <p className="mt-3 text-sm text-foreground/85"><span className="font-semibold text-foreground">Next 2 hours:</span> {nextLine}</p>
-        <p className="mt-2 text-sm text-foreground/85">
+        <p className="mt-3 text-sm text-foreground/85">
           <span className="font-semibold text-foreground">Indoors (no AC):</span> {indoorEstimate(w.temp, w.hourly)}
         </p>
         <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
@@ -83,22 +79,7 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
   );
 }
 
-function buildNextLine(now: WeatherHour | undefined, soon: WeatherHour[]): string {
-  if (!now) return "—";
-  const changes: string[] = [];
-  soon.forEach(h => {
-    const dT = h.feelsLike - now.feelsLike;
-    if (Math.abs(dT) >= 2) changes.push(dT > 0 ? `warming toward ${Math.round(h.feelsLike)}°` : `cooling to ${Math.round(h.feelsLike)}°`);
-    if (h.precipProb >= 60 && now.precipProb < 60) changes.push(`rain likely by ${fmt(h.time)}`);
-    if (h.precipProb < 30 && now.precipProb >= 60) changes.push(`rain easing by ${fmt(h.time)}`);
-  });
-  const base = `Feels ${Math.round(now.feelsLike)}° now, ${Math.round(now.precipProb)}% rain chance.`;
-  return changes.length ? `${base} ${changes.slice(0, 2).join(", ")}.` : `${base} Steady through the next couple of hours.`;
-}
-
-function fmt(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
+// (Next 2 hours line removed — that lives in the top AlertsHeroCard now.)
 
 interface Pattern {
   label: string; minFeel: number; maxFeel: number; avgFeel: number;

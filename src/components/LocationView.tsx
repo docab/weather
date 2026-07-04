@@ -6,7 +6,7 @@ import { PollenCard } from "./PollenCard";
 import { AqiCard } from "./AqiCard";
 import { AlertsList } from "./AlertsList";
 import { WeatherRadarCard } from "./WeatherRadarCard";
-import { SmartAlertsCard } from "./SmartAlertsCard";
+import { AlertsHeroCard } from "./AlertsHeroCard";
 import { SuggestionsCard } from "./SuggestionsCard";
 import { RainCard } from "./RainCard";
 import { MoreCard } from "./MoreCard";
@@ -18,12 +18,12 @@ import { MoreCard } from "./MoreCard";
 export function LocationView({ conditions }: { conditions: LocationConditions }) {
   return (
     <div className="space-y-4 animate-fade-in-up">
+      <AlertsHeroCard conditions={conditions} />
       <WeatherHero conditions={conditions} />
       {conditions.weather.alerts.length > 0 && (
         <AlertsList alerts={conditions.weather.alerts} />
       )}
       <HowItFeelsCard conditions={conditions} />
-      <SmartAlertsCard conditions={conditions} />
       <SuggestionsCard conditions={conditions} />
       <RainCard conditions={conditions} />
       <HourlySlider conditions={conditions} />

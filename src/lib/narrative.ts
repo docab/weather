@@ -192,38 +192,32 @@ export function buildPerfume(weather: WeatherData, pollen: PollenData): string {
   const windy = weather.windSpeed >= 18;
   const hayfever = pollen.level === "high" || pollen.level === "very-high";
 
-  // Hay-fever days — keep it gentle, skin-close, no heady florals
+  // Every pick below is a signed original from an established house — no
+  // replicas, no "dupes", no discount clones. Chosen for how the notes carry
+  // in the specific weather.
   if (hayfever) {
-    return "Skin-close musk & clean cotton — keep florals light so they don't compete with the pollen. Try Maison Margiela 'Lazy Sunday Morning', Le Labo Another 13 or Glossier You.";
+    return "Skin-close and quiet so it doesn't clash with pollen. Try Maison Margiela 'Lazy Sunday Morning', Le Labo Another 13 or Frédéric Malle Musc Ravageur (lightly applied).";
   }
-
-  // Hot & sticky
   if (t >= 24 && humid) {
-    return "Aquatic & marine — salt, cucumber, neroli. Try Giorgio Armani Acqua di Giò, Maison Margiela 'Beach Walk', Issey Miyake L'Eau d'Issey or CK One.";
+    return "Aquatic & marine — salt, cucumber, neroli lift beautifully in humid heat. Try Hermès Un Jardin en Méditerranée, Maison Margiela 'Beach Walk' or Chanel Allure Homme Sport Eau Extrême.";
   }
-  // Hot & dry
   if (t >= 24) {
-    return "Bright citrus & green tea — bergamot, lemon, vetiver. Try Hermès Eau d'Orange Verte, Atelier Cologne Orange Sanguine or Bvlgari Eau Parfumée au Thé Vert.";
+    return "Bright citrus & green tea, made for radiant heat. Try Hermès Eau d'Orange Verte, Atelier Cologne Orange Sanguine or Bvlgari Eau Parfumée au Thé Vert.";
   }
-  // Warm pleasant
   if (t >= 18) {
-    return "Fig, iris & soft florals. Try Diptyque Philosykos, Jo Malone Wood Sage & Sea Salt or Chloé Eau de Parfum.";
+    return "Fig, iris & soft florals for pleasant warmth. Try Diptyque Philosykos, Jo Malone Wood Sage & Sea Salt or Chanel Chance Eau Tendre.";
   }
-  // Mild
   if (t >= 12) {
-    if (wet) return "Petrichor & green — moss, violet leaf, a touch of rain. Try Serge Lutens Fille en Aiguilles, Comme des Garçons 2, or Demeter Rain.";
-    return "Aromatic fougère — lavender, rosemary, woody base. Try Tom Ford Beau de Jour, Dior Sauvage or Guerlain Mouchoir de Monsieur.";
+    if (wet) return "Petrichor and green notes to match the damp air. Try Serge Lutens Fille en Aiguilles, Comme des Garçons 2 or Diptyque Eau Duelle.";
+    return "Aromatic fougère — lavender, rosemary, woody base. Try Tom Ford Beau de Jour, Guerlain Mouchoir de Monsieur or Creed Aventus.";
   }
-  // Cool
   if (t >= 6) {
-    return "Smoky woods & leather — cedar, vetiver, incense. Try Le Labo Santal 33, Tom Ford Tobacco Vanille or Byredo Gypsy Water.";
+    return "Smoky woods & leather with proper projection for the cold. Try Le Labo Santal 33, Tom Ford Tobacco Vanille or Byredo Gypsy Water.";
   }
-  // Cold
   if (t >= 0) {
-    return "Amber, oud & vanilla — rich resinous warmth. Try Maison Francis Kurkdjian Baccarat Rouge 540, YSL Libre or Tom Ford Oud Wood.";
+    return "Amber, oud & vanilla — resinous warmth against the chill. Try Maison Francis Kurkdjian Baccarat Rouge 540, YSL Libre or Tom Ford Oud Wood.";
   }
-  // Freezing
-  return "Heavy gourmand & oud — tonka, benzoin, animalic woods. Try Mugler Angel, Killian Black Phantom or Amouage Interlude Man.";
+  return "Heavy gourmand & oud for arctic air. Try Mugler Angel, Kilian Black Phantom or Amouage Interlude Man.";
 }
 
 /**

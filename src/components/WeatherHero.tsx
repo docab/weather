@@ -14,7 +14,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const phaseOverlay = sunPhaseOverlay(weather);
   return (
     <div
-      className="glass-card relative overflow-hidden p-6"
+      className="glass-card relative overflow-hidden p-6 min-h-[420px]"
       style={dynamicSkyStyle(info.sky, weather.feelsLike, {
         windSpeed: weather.windSpeed,
         humidity: weather.humidity,
@@ -25,7 +25,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
     >
       <WeatherFX weather={weather} />
       {/* Frosted branch: sways with wind speed, always drawn behind text. */}
-      <WindBranchFX mph={weather.windSpeed} />
+      <WindBranchFX mph={weather.windSpeed} latitude={conditions.location.latitude} />
       {/* Time-of-day overlay — dawn / dusk warm wash, deep-night cool wash. */}
       {phaseOverlay && (
         <div className="pointer-events-none absolute inset-0" style={{ background: phaseOverlay }} />
@@ -35,13 +35,13 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       <div className="pointer-events-none absolute inset-x-0 top-1/3 bottom-0 bg-gradient-to-b from-transparent via-background/25 to-background/55" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
       <div className="relative [text-shadow:0_1px_2px_rgb(0_0_0_/_0.35)]">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 pt-2">
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest text-foreground/85">
               {info.label}
             </div>
             <div className="mt-1 tabular">
-              <span className="block text-7xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
+              <span className="block text-8xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
               <span className="mt-1 block text-[11px] uppercase tracking-widest text-foreground/75">
                 Feels like
               </span>
@@ -50,25 +50,28 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
               </span>
             </div>
           </div>
-          <div className="flex h-20 w-20 items-center justify-center text-foreground/85">
+          <div className="flex h-24 w-24 items-center justify-center text-foreground/85">
             {isClear && weather.isDay
-              ? <AnimatedSun size={80} warm={weather.feelsLike >= 22} />
+              ? <AnimatedSun size={96} warm={weather.feelsLike >= 22} />
               : isClear && !weather.isDay
-                ? <AnimatedMoon size={72} illumination={phase.illumination} phase={phase.phase} />
-                : <SkyIcon className="h-20 w-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]" strokeWidth={1.4} />}
+                ? <AnimatedMoon size={88} illumination={phase.illumination} phase={phase.phase} />
+                : <SkyIcon className="h-24 w-24 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]" strokeWidth={1.4} />}
           </div>
         </div>
 
-        <div className="mt-5 flex items-center gap-3 text-sm">
+        <div className="mt-8 flex items-center gap-3 text-sm">
           <span className="inline-flex items-center gap-1 text-foreground/80 tabular">
             <ArrowUp className="h-3.5 w-3.5" /> {Math.round(weather.high)}°
           </span>
           <span className="inline-flex items-center gap-1 text-foreground/80 tabular">
             <ArrowDown className="h-3.5 w-3.5" /> {Math.round(weather.low)}°
           </span>
+          <span className="ml-2 text-xs text-foreground/75 truncate">
+            {conditions.location.customName || conditions.location.name}
+          </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-4 gap-3">
+        <div className="mt-6 grid grid-cols-4 gap-3">
           <Stat icon={<CloudRain className="h-4 w-4" />} label="Rain" value={`${Math.round(weather.precipProb)}%`} anchor="rain" />
           <Stat icon={<Wind className="h-4 w-4" />} label="Wind" value={`${Math.round(weather.windSpeed)} mph`} anchor="more" />
           <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} anchor="more" />

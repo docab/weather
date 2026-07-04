@@ -33,15 +33,68 @@ export function SkyNowCard({ conditions }: { conditions: LocationConditions }) {
           <span className="inline-flex items-center gap-1"><Cloud className="h-3 w-3" /> Cloud cover</span>
           <span className="tabular">{Math.round(weather.cloudCover)}%</span>
         </div>
-        <CloudLayer label="High" value={weather.cloudHigh} hint="cirrus, wispy" />
-        <CloudLayer label="Mid"  value={weather.cloudMid}  hint="altocumulus" />
-        <CloudLayer label="Low"  value={weather.cloudLow}  hint="stratus, fog" />
+        <CloudLayer label="High" value={weather.cloudHigh} hint="cirrus · ice crystals, ≥ 6 km" />
+        <CloudLayer label="Mid"  value={weather.cloudMid}  hint="altocumulus · 2–6 km" />
+        <CloudLayer label="Low"  value={weather.cloudLow}  hint="stratus / fog · 0–2 km" />
         <p className="mt-2 text-xs text-foreground/85">{cloudLine}</p>
       </div>
-      <p className="relative mt-3 text-[11px] text-muted-foreground">
-        Sun & moon have their own cards below.
-      </p>
+
+      {/* Educational deep-dive: what each cloud tier means for the weather + your body */}
+      <div className="relative mt-3 space-y-2">
+        <CloudExplainer
+          tier="High"
+          layer="Cirrus"
+          altitude="≥ 6 km / 20,000+ ft"
+          appearance="Thin, wispy, hair-like strands."
+          made="Entirely ice crystals — the air's too cold for liquid water."
+          weather="Doesn't rain itself, but a thickening cirrus sheet is often the first sign of a warm front — precipitation within 24–36h."
+          health="Marks a falling barometric gradient ahead of a front. That pressure drop lets tissues expand slightly and can trigger joint pain in arthritis or old injuries."
+          active={weather.cloudHigh}
+        />
+        <CloudExplainer
+          tier="Mid"
+          layer="Altocumulus"
+          altitude="2–6 km / 6,500–20,000 ft"
+          appearance="Rolled, puffy patches — a 'mackerel sky'."
+          made="Mostly supercooled water droplets, with some ice."
+          weather="On a warm morning it signals an unstable atmosphere — often precedes isolated thunderstorms or heavy downpours by late afternoon."
+          health="Tied to thunderstorm asthma: convective updrafts pull pollen into cloud base, humidity ruptures grains into fine, deeply respirable allergens that get swept back down."
+          active={weather.cloudMid}
+        />
+        <CloudExplainer
+          tier="Low"
+          layer="Stratus / Fog"
+          altitude="0–2 km / 0–6,500 ft"
+          appearance="A featureless grey cloak; on the ground = fog."
+          made="Liquid water droplets from cooling of a moist air mass."
+          weather="Rare heavy downpours, but responsible for dreary drizzle, mist and light snow. Fog can drop visibility below 1 km."
+          health="Fog traps PM2.5, PM10 and NO₂ — creates dense smog that flares asthma/COPD. Prolonged stratus cuts UV-B: less vitamin D synthesis, lower serotonin — worsens SAD and circadian dips."
+          active={weather.cloudLow}
+        />
+      </div>
     </div>
+  );
+}
+
+function CloudExplainer({ tier, layer, altitude, appearance, made, weather, health, active }: {
+  tier: string; layer: string; altitude: string; appearance: string; made: string;
+  weather: string; health: string; active: number;
+}) {
+  const strong = active >= 40;
+  return (
+    <details className={`group rounded-xl border p-3 text-xs ${strong ? "border-primary/40 bg-primary/10" : "border-border/60 bg-secondary/30"}`}>
+      <summary className="flex cursor-pointer items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-widest">
+        <span className="text-foreground/90">{tier} · {layer}</span>
+        <span className="text-muted-foreground">{Math.round(active)}%</span>
+      </summary>
+      <div className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-foreground/85">
+        <div><span className="font-semibold text-foreground">Altitude:</span> {altitude}</div>
+        <div><span className="font-semibold text-foreground">Appearance:</span> {appearance}</div>
+        <div><span className="font-semibold text-foreground">Made of:</span> {made}</div>
+        <div><span className="font-semibold text-foreground">Weather impact:</span> {weather}</div>
+        <div><span className="font-semibold text-foreground">Health impact:</span> {health}</div>
+      </div>
+    </details>
   );
 }
 

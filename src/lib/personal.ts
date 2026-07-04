@@ -1,15 +1,22 @@
 import type { WeatherData, WeatherHour } from "./types";
 
-export type ActivityKey = "run" | "cycle" | "walk" | "garden" | "photo" | "dining";
-export type CommuteMode = "drive" | "cycle" | "walk" | "transit";
-export type HealthFlag = "asthma" | "hayfever" | "migraine" | "arthritis" | "eczema" | "heart" | "pregnancy";
+export type ActivityKey =
+  | "run" | "cycle" | "walk" | "garden" | "photo" | "dining"
+  | "hike" | "swim" | "yoga" | "tennis" | "football" | "golf"
+  | "gym" | "kids_play" | "birdwatch" | "fish" | "picnic" | "market";
+export type CommuteMode = "drive" | "cycle" | "walk" | "transit" | "motorcycle" | "wheelchair";
+export type HealthFlag =
+  | "asthma" | "hayfever" | "migraine" | "arthritis" | "eczema" | "heart" | "pregnancy"
+  | "copd" | "diabetes" | "raynaud" | "sinusitis" | "dry_eyes"
+  | "low_bp" | "high_bp" | "sensitive_skin" | "menopause" | "insomnia";
 export type HouseholdFlag = "dog" | "kids" | "plants" | "garden" | "car_outside";
 export type Units = "metric" | "imperial";
 
 export interface PersonalPrefs {
   name?: string;
   activities: ActivityKey[];
-  commuteMode: CommuteMode;
+  /** Multiple modes allowed — user often mixes walk + transit, drive + walk etc. */
+  commuteModes: CommuteMode[];
   /** "HH:MM" 24h local */
   commuteOut: string;
   commuteBack: string;
@@ -37,7 +44,7 @@ export interface PersonalPrefs {
 const KEY = "pw.personal.v1";
 export const defaultPersonalPrefs: PersonalPrefs = {
   activities: ["walk", "run"],
-  commuteMode: "walk",
+  commuteModes: ["walk"],
   commuteOut: "08:30",
   commuteBack: "17:30",
   tempSensitivity: 0,
@@ -54,7 +61,12 @@ export function loadPersonalPrefs(): PersonalPrefs {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultPersonalPrefs;
-    return { ...defaultPersonalPrefs, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    // Migrate the old single commuteMode → commuteModes array.
+    if (parsed && typeof parsed.commuteMode === "string" && !parsed.commuteModes) {
+      parsed.commuteModes = [parsed.commuteMode];
+    }
+    return { ...defaultPersonalPrefs, ...parsed };
   } catch { return defaultPersonalPrefs; }
 }
 export function savePersonalPrefs(p: PersonalPrefs) {
@@ -64,19 +76,32 @@ export function savePersonalPrefs(p: PersonalPrefs) {
 export const ACTIVITY_LABEL: Record<ActivityKey, string> = {
   run: "Running", cycle: "Cycling", walk: "Walking",
   garden: "Gardening", photo: "Photography", dining: "Outdoor dining",
+  hike: "Hiking", swim: "Open-water swim", yoga: "Outdoor yoga",
+  tennis: "Tennis", football: "Football / 5-a-side", golf: "Golf",
+  gym: "Gym", kids_play: "Kids' park play", birdwatch: "Birdwatching",
+  fish: "Fishing", picnic: "Picnic", market: "Outdoor market",
 };
 export const ACTIVITY_ICON: Record<ActivityKey, string> = {
   run: "🏃", cycle: "🚴", walk: "🚶", garden: "🌱", photo: "📷", dining: "🍷",
+  hike: "🥾", swim: "🏊", yoga: "🧘", tennis: "🎾", football: "⚽", golf: "🏌️",
+  gym: "🏋️", kids_play: "🛝", birdwatch: "🦉", fish: "🎣", picnic: "🧺", market: "🛍️",
 };
 
 export const HEALTH_LABEL: Record<HealthFlag, string> = {
   asthma: "Asthma", hayfever: "Hay fever", migraine: "Migraines",
   arthritis: "Joint pain", eczema: "Eczema / dry skin",
   heart: "Heart condition", pregnancy: "Pregnancy",
+  copd: "COPD / chronic bronchitis", diabetes: "Diabetes",
+  raynaud: "Raynaud's / cold hands", sinusitis: "Sinus issues",
+  dry_eyes: "Dry eyes", low_bp: "Low blood pressure", high_bp: "High blood pressure",
+  sensitive_skin: "Sensitive skin / rosacea", menopause: "Menopause",
+  insomnia: "Sleep issues",
 };
 export const HEALTH_ICON: Record<HealthFlag, string> = {
   asthma: "🫁", hayfever: "🤧", migraine: "🤕",
   arthritis: "🦴", eczema: "🧴", heart: "❤️", pregnancy: "🤰",
+  copd: "🌬️", diabetes: "🩸", raynaud: "🥶", sinusitis: "👃", dry_eyes: "👁️",
+  low_bp: "📉", high_bp: "📈", sensitive_skin: "🌸", menopause: "🔥", insomnia: "😴",
 };
 
 export const HOUSEHOLD_LABEL: Record<HouseholdFlag, string> = {
@@ -97,31 +122,88 @@ export function healthAdvice(prefs: PersonalPrefs, weather: WeatherData,
   air: { aqiIndex: number; pollenLevel: string }): string[] {
   const out: string[] = [];
   const w = weather;
+  const push = (s: string) => out.push(s);
+  // Every clause tries to name the specific weather driver and what it means
+  // for that condition — never just "watch out today".
   for (const flag of prefs.health) {
     if (flag === "asthma") {
-      if (air.aqiIndex >= 50 || w.humidity >= 85) out.push(`Air's heavy (AQI ${air.aqiIndex}, humidity ${Math.round(w.humidity)}%) — keep a reliever inhaler within reach today.`);
-      if (w.feelsLike <= 2) out.push(`Cold air can trigger wheeze — scarf over the mouth on the walk out and warm up indoors before exercise.`);
+      if (air.aqiIndex >= 50) push(`Air quality is elevated (AQI ${air.aqiIndex}) — traffic PM2.5 and NO₂ inflame bronchi. Reliever inhaler in your pocket; do cardio away from main roads.`);
+      if (w.humidity >= 85) push(`Humidity ${Math.round(w.humidity)}% — heavy air holds allergens and irritants close. Wheeze risk climbs by evening.`);
+      if (w.feelsLike <= 2) push(`Cold-air constriction is a classic trigger — scarf over the mouth, warm up indoors 5 min before exercise.`);
+      if (w.precipProb >= 60 && w.windSpeed >= 15) push(`Wind + rain can spark thunderstorm-asthma — pollen fragments become deeply respirable. Stay in during any storm break.`);
+    }
+    if (flag === "copd") {
+      if (w.feelsLike <= 5 || w.feelsLike >= 30) push(`Temperature extremes stress lungs — pace tasks, use pursed-lip breathing, keep rescue meds close.`);
+      if (air.aqiIndex >= 40) push(`AQI ${air.aqiIndex} — even moderate PM2.5 significantly worsens COPD. Avoid busy roads and outdoor exertion.`);
+      if (w.humidity <= 30) push(`Very dry air (${Math.round(w.humidity)}%) thickens mucus — sip water hourly, humidifier at home if you have one.`);
     }
     if (flag === "hayfever") {
-      if (["high", "very-high"].includes(air.pollenLevel)) out.push(`Pollen is ${air.pollenLevel} today — antihistamine before you head out, sunglasses to keep it out of your eyes.`);
-      if (w.windSpeed >= 18) out.push(`Wind is shaking pollen loose (${Math.round(w.windSpeed)} mph) — shower and change clothes when you get home.`);
+      if (["high", "very-high"].includes(air.pollenLevel)) push(`Pollen is ${air.pollenLevel} — antihistamine 30 min before heading out; wraparound sunglasses cut ocular exposure ~70%.`);
+      if (w.windSpeed >= 18) push(`Wind ${Math.round(w.windSpeed)} mph is shaking pollen loose — shower and change clothes on getting home.`);
+      if (w.feelsLike >= 22 && w.humidity <= 50) push(`Warm, dry air spreads pollen far — barrier balm (Vaseline) around nostrils cuts inhaled load.`);
+    }
+    if (flag === "sinusitis") {
+      const pressureSwing = Math.abs((w.pressure ?? 1013) - 1013) >= 6;
+      if (pressureSwing) push(`Pressure is off baseline — sinus cavities react to the swing. Steam inhalation morning and night helps.`);
+      if (w.humidity <= 30) push(`Dry air (${Math.round(w.humidity)}%) irritates sinus membranes — saline spray, and don't skip water.`);
+      if (w.feelsLike <= 4) push(`Cold air causes vasoconstriction in sinuses — cover nose/mouth on the walk out.`);
     }
     if (flag === "migraine") {
-      if (w.uvIndex >= 7 || (w.humidity >= 80 && w.feelsLike >= 24)) out.push(`Bright/humid combo today — known migraine trigger. Hydrate early and keep sunglasses on.`);
+      if (w.uvIndex >= 7) push(`Strong UV (${Math.round(w.uvIndex)}) is a known photic trigger — sunglasses even in shade.`);
+      if (w.humidity >= 80 && w.feelsLike >= 24) push(`Hot + humid combo — dehydration + serotonin dips trigger attacks. 500 ml water within the next hour.`);
+      const pressureSwing = Math.abs((w.pressure ?? 1013) - 1013) >= 7;
+      if (pressureSwing) push(`Barometric pressure is well off baseline (~${Math.round(w.pressure ?? 1013)} hPa) — this is the biggest weather migraine trigger. Take your abortive early if aura hits.`);
     }
     if (flag === "arthritis") {
-      if (w.feelsLike <= 6) out.push(`Cold + damp will stiffen joints — extra warm-up time today, and a base layer keeps you moving easier.`);
+      if (w.feelsLike <= 6) push(`Cold + damp will stiffen joints — 10-min warm-up before any activity, and layer a thin thermal.`);
+      if (Math.abs((w.pressure ?? 1013) - 1013) >= 8) push(`Barometric shift ~${Math.round(w.pressure ?? 1013)} hPa — tissues expand slightly, flaring joint tension. Gentle mobility work helps.`);
+    }
+    if (flag === "raynaud") {
+      if (w.feelsLike <= 10) push(`Feels ${Math.round(w.feelsLike)}° — Raynaud's kicks in around 15° for many. Hand warmers, thin liners under gloves, avoid holding cold objects bare-handed.`);
+      if (w.windSpeed >= 15 && w.feelsLike <= 12) push(`Wind chill will bite hands and feet fast — mittens beat gloves, thermal socks essential.`);
     }
     if (flag === "eczema") {
-      if (w.humidity <= 35) out.push(`Dry air (humidity ${Math.round(w.humidity)}%) — moisturise after washing up and before stepping out.`);
-      if (w.feelsLike >= 26) out.push(`Sweat will flare things — loose cotton, frequent rinses.`);
+      if (w.humidity <= 35) push(`Dry air (${Math.round(w.humidity)}%) strips the skin barrier — thick emollient after washing, again before bed.`);
+      if (w.feelsLike >= 26) push(`Sweat will flare flexures — loose cotton only, rinse and pat dry (don't rub) mid-afternoon.`);
+      if (w.uvIndex >= 6) push(`UV can inflame active patches — fragrance-free SPF 30+ over affected skin.`);
+    }
+    if (flag === "sensitive_skin") {
+      if (w.uvIndex >= 6) push(`Sensitive/rosacea skin flushes under UV ${Math.round(w.uvIndex)} — mineral SPF (zinc oxide) beats chemical filters.`);
+      if (w.windSpeed >= 20) push(`Wind ${Math.round(w.windSpeed)} mph strips the barrier — barrier cream (Cerave/Avene) before heading out.`);
+      if (w.feelsLike >= 25) push(`Heat + sweat trigger rosacea flushing — cool water on wrists, avoid spicy lunches today.`);
+    }
+    if (flag === "dry_eyes") {
+      if (w.humidity <= 40) push(`Humidity ${Math.round(w.humidity)}% — tear film evaporates fast. Lubricating drops every 2h, blink breaks off screen.`);
+      if (w.windSpeed >= 15) push(`Wind ${Math.round(w.windSpeed)} mph will dry eyes further — wraparound sunglasses, gel drops in your bag.`);
     }
     if (flag === "heart") {
-      if (w.feelsLike <= 0 || w.feelsLike >= 30) out.push(`Temperature extremes are hard on the cardiovascular system — pace yourself today and skip the heavy chores.`);
+      if (w.feelsLike <= 0 || w.feelsLike >= 30) push(`Temperature extremes strain the heart — skip heavy chores, hydrate steadily, split tasks into short blocks.`);
+      if (Math.abs((w.pressure ?? 1013) - 1013) >= 10) push(`Big pressure swing can nudge BP — take readings if you monitor, and don't skip morning meds.`);
+    }
+    if (flag === "high_bp") {
+      if (w.feelsLike <= 5) push(`Cold constricts vessels — BP typically rises. Warm up before going out, avoid sudden cold plunges.`);
+      if (w.feelsLike >= 28) push(`Heat + dehydration drops BP but strains the heart — sip water, add a pinch of salt if you sweat heavily.`);
+    }
+    if (flag === "low_bp") {
+      if (w.feelsLike >= 26) push(`Heat drops BP further — stand up slowly, salty snacks, extra 500 ml water today.`);
+    }
+    if (flag === "diabetes") {
+      if (w.feelsLike >= 28) push(`Heat can lower blood glucose and speed insulin absorption — check more often, keep fast carbs to hand.`);
+      if (w.feelsLike <= 2) push(`Cold reduces circulation — feet warm and dry to avoid neuropathy issues; check before bed.`);
+    }
+    if (flag === "menopause") {
+      if (w.feelsLike >= 24 || w.humidity >= 75) push(`Warm/humid air amplifies hot flushes — cotton/linen layers you can strip fast, cool water on wrists.`);
+      if (w.feelsLike <= 5) push(`Sudden cold-to-warm swings trigger flushes — layer up so you can vent inside without stripping to a t-shirt.`);
+    }
+    if (flag === "insomnia") {
+      const nightPeak = weather.hourly.slice(0, 24).find(h => new Date(h.time).getHours() === 23)?.feelsLike ?? w.feelsLike;
+      if (nightPeak >= 22) push(`Bedroom air will still be ~${Math.round(nightPeak)}° at 11pm — cool showers, cotton sheets, fan on for sleep quality.`);
+      if (w.feelsLike >= 28 && w.humidity >= 65) push(`Muggy night ahead — melatonin release lags in warm rooms. Open windows once outside dips below inside.`);
     }
     if (flag === "pregnancy") {
-      if (w.feelsLike >= 26) out.push(`Heat hits harder when pregnant — sit in shade for 5 min every half hour, water bottle within reach.`);
-      if (w.feelsLike <= 2) out.push(`Slippery cold underfoot — flat soles with grip today, and a hand on the rail.`);
+      if (w.feelsLike >= 26) push(`Heat hits harder when pregnant — shade for 5 min every half hour, cool water bottle.`);
+      if (w.feelsLike <= 2) push(`Slippery cold underfoot — flat grippy soles, hand on the rail.`);
+      if (w.uvIndex >= 7) push(`UV ${Math.round(w.uvIndex)} — pregnancy melasma flares fast; brimmed hat and mineral SPF 50.`);
     }
   }
   return out;
@@ -162,12 +244,20 @@ export function householdAdvice(prefs: PersonalPrefs, weather: WeatherData): str
 const IDEAL: Record<ActivityKey, [number, number]> = {
   run: [6, 16], cycle: [10, 22], walk: [8, 22],
   garden: [12, 24], photo: [4, 26], dining: [16, 26],
+  hike: [8, 22], swim: [18, 30], yoga: [15, 26],
+  tennis: [12, 24], football: [8, 20], golf: [12, 24],
+  gym: [4, 26], kids_play: [12, 24], birdwatch: [6, 22],
+  fish: [8, 22], picnic: [16, 26], market: [10, 24],
 };
 const RAIN_PENALTY: Record<ActivityKey, number> = {
   run: 1.0, cycle: 1.2, walk: 0.7, garden: 1.0, photo: 0.4, dining: 1.6,
+  hike: 1.1, swim: 0.3, yoga: 1.5, tennis: 1.8, football: 1.2, golf: 1.7,
+  gym: 0.3, kids_play: 1.4, birdwatch: 1.2, fish: 0.6, picnic: 1.7, market: 1.3,
 };
 const WIND_PENALTY: Record<ActivityKey, number> = {
   run: 0.7, cycle: 1.6, walk: 0.5, garden: 0.6, photo: 0.4, dining: 1.3,
+  hike: 0.7, swim: 1.2, yoga: 1.4, tennis: 1.6, football: 0.9, golf: 1.8,
+  gym: 0.1, kids_play: 0.9, birdwatch: 1.0, fish: 1.0, picnic: 1.5, market: 0.7,
 };
 
 function tempScore(t: number, ideal: [number, number], sens: number): number {
@@ -246,7 +336,8 @@ export function commuteRiskAt(
   const wind = weather.windSpeed;
   const t = closest.feelsLike;
   const isCold = t < 4, isHot = t > 28;
-  const mode = prefs.commuteMode;
+  const modes = prefs.commuteModes.length ? prefs.commuteModes : (["walk"] as CommuteMode[]);
+  const mode = modes[0];
 
   const flags: string[] = [];
   if (rain >= prefs.rainTolerance) flags.push(`${Math.round(rain)}% rain`);
@@ -260,6 +351,7 @@ export function commuteRiskAt(
 
   const modeLabel: Record<CommuteMode, string> = {
     drive: "drive", cycle: "ride", walk: "walk", transit: "trip",
+    motorcycle: "ride", wheelchair: "wheel",
   };
 
   const peakTime = new Date(peakRainHour.time).toLocaleTimeString("en-GB",
