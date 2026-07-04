@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import type { LocationConditions, WeatherHour } from "@/lib/types";
+import type { LocationConditions, WeatherHour, WeatherDay } from "@/lib/types";
 import { describeWeather } from "@/lib/weatherCodes";
 import { CloudRain, Sun, Wind, ChevronDown, Droplets, Thermometer } from "lucide-react";
 import { dayGradient } from "@/lib/dayGradient";
@@ -165,6 +165,39 @@ function labelFor(iso: string, idx: number): string {
   if (idx === 0) return "Today";
   if (idx === 1) return "Tomorrow";
   return new Date(iso).toLocaleDateString(undefined, { weekday: "long" });
+}
+
+/**
+ * Longer, human, one-paragraph day narrative for days where hourly data
+ * isn't yet available. Uses temp/precip/wind/UV + pollen where relevant.
+ */
+function longDayNarrative(d: WeatherDay, c: LocationConditions): string {
+  const info = describeWeather(d.weatherCode, true);
+  const feelsHigh = Math.round(d.high);
+  const feelsLow = Math.round(d.low);
+
+  const skyPart = (() => {
+    if (info.sky === "clear") return d.high >= 24 ? "Warm and pleasant. Plenty of sun, a stray cloud here and there." : "Bright and clear, easy sky.";
+    if (info.sky === "cloudy") return d.precipProb >= 30 ? "Mostly overcast with a chance of a shower slipping through." : "Overcast lid all day, no sun to speak of.";
+    if (info.sky === "rain") return d.precipProb >= 70 ? `Wet through most of the day — around ${d.precipSum.toFixed(1)} mm expected.` : "Showers on and off — plan around the wettest window.";
+    if (info.sky === "snow") return "Snow on the cards — properly wintry.";
+    return info.label + ".";
+  })();
+
+  const tempPart = ` Feels about ${feelsHigh}° at the top, dipping to ${feelsLow}° overnight.`;
+  const windPart = d.windMax >= 40 ? ` Very windy — gusts to ${Math.round(d.windMax)} mph.` :
+                   d.windMax >= 25 ? ` Breezy — up to ${Math.round(d.windMax)} mph.` : "";
+  const uvPart = d.uvIndexMax >= 8 ? ` UV is very high (${Math.round(d.uvIndexMax)}) — sunscreen on and hat if you're out at midday.` :
+                 d.uvIndexMax >= 6 ? ` UV is high (${Math.round(d.uvIndexMax)}) — SPF for anything longer than 20 min.` : "";
+
+  const pollen = c.pollen;
+  const pollenPart = pollen.level === "very-high"
+    ? " Very heavy grass/tree pollen — antihistamine day if you suffer."
+    : pollen.level === "high"
+      ? " Heavy pollen about — take an antihistamine if you're sensitive."
+      : "";
+
+  return `${skyPart}${tempPart}${windPart}${uvPart}${pollenPart}`.replace(/\s+/g, " ").trim();
 }
 
 function plainDayBriefing(
