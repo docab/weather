@@ -79,22 +79,7 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
   );
 }
 
-function buildNextLine(now: WeatherHour | undefined, soon: WeatherHour[]): string {
-  if (!now) return "—";
-  const changes: string[] = [];
-  soon.forEach(h => {
-    const dT = h.feelsLike - now.feelsLike;
-    if (Math.abs(dT) >= 2) changes.push(dT > 0 ? `warming toward ${Math.round(h.feelsLike)}°` : `cooling to ${Math.round(h.feelsLike)}°`);
-    if (h.precipProb >= 60 && now.precipProb < 60) changes.push(`rain likely by ${fmt(h.time)}`);
-    if (h.precipProb < 30 && now.precipProb >= 60) changes.push(`rain easing by ${fmt(h.time)}`);
-  });
-  const base = `Feels ${Math.round(now.feelsLike)}° now, ${Math.round(now.precipProb)}% rain chance.`;
-  return changes.length ? `${base} ${changes.slice(0, 2).join(", ")}.` : `${base} Steady through the next couple of hours.`;
-}
-
-function fmt(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
+// (Next 2 hours line removed — that lives in the top AlertsHeroCard now.)
 
 interface Pattern {
   label: string; minFeel: number; maxFeel: number; avgFeel: number;
