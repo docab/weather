@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import type { LocationConditions } from "@/lib/types";
 import {
   ACTIVITY_ICON, ACTIVITY_LABEL, type ActivityKey, type CommuteMode,
@@ -12,10 +14,18 @@ import { Slider } from "@/components/ui/slider";
 import {
   Settings2, AlertTriangle, CheckCircle2, Clock, Bike, Car, Bus, Footprints,
   Heart, Home, Moon, Sunrise, ChevronDown, ChevronUp,
+  Settings as SettingsIcon, RefreshCw, Accessibility, Rocket,
 } from "lucide-react";
 
-const ACTS: ActivityKey[] = ["run", "cycle", "walk", "garden", "photo", "dining"];
-const HEALTHS: HealthFlag[] = ["asthma", "hayfever", "migraine", "arthritis", "eczema", "heart", "pregnancy"];
+const ACTS: ActivityKey[] = [
+  "run", "cycle", "walk", "hike", "swim", "yoga", "tennis", "football", "golf",
+  "gym", "garden", "photo", "dining", "picnic", "market", "kids_play", "birdwatch", "fish",
+];
+const HEALTHS: HealthFlag[] = [
+  "asthma", "copd", "hayfever", "sinusitis", "migraine", "arthritis", "raynaud",
+  "eczema", "sensitive_skin", "dry_eyes", "heart", "high_bp", "low_bp",
+  "diabetes", "pregnancy", "menopause", "insomnia",
+];
 const HOUSEHOLDS: HouseholdFlag[] = ["dog", "kids", "plants", "garden", "car_outside"];
 
 /**
@@ -27,6 +37,8 @@ const HOUSEHOLDS: HouseholdFlag[] = ["dog", "kids", "plants", "garden", "car_out
 export function MeView({ conditions }: { conditions: LocationConditions | undefined }) {
   const [prefs, setPrefs] = useState<PersonalPrefs>(() => loadPersonalPrefs());
   const [editing, setEditing] = useState(false);
+  const queryClient = useQueryClient();
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["conditions"] });
 
   const update = (p: PersonalPrefs) => { setPrefs(p); savePersonalPrefs(p); };
   const toggleAct = (k: ActivityKey) => {
@@ -75,6 +87,22 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
 
   return (
     <div className="space-y-4 animate-fade-in-up">
+      {/* Quick actions — settings + refresh live here now that the top bar is gone. */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={refresh}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        </button>
+        <Link
+          to="/settings"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <SettingsIcon className="h-3.5 w-3.5" /> Settings
+        </Link>
+      </div>
+
       {/* Greeting + lifestyle score */}
       <div className="glass-card p-5 shadow-card">
         <div className="flex items-start justify-between gap-3">
@@ -106,7 +134,12 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
       {/* Commute */}
       <div className="glass-card p-5 shadow-card">
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          <CommuteIcon mode={prefs.commuteMode} /> Commute outlook
+          <CommuteIcon mode={prefs.commuteModes[0] ?? "walk"} /> Commute outlook
+          {prefs.commuteModes.length > 1 && (
+            <span className="text-[10px] normal-case tracking-normal text-muted-foreground/80">
+              · {prefs.commuteModes.join(" + ")}
+            </span>
+          )}
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <RiskRow title={`Arrive by ${prefs.commuteOut}`} risk={outRisk} />
@@ -175,16 +208,26 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
               </div>
             </Field>
 
-            <Field label="How you usually get around">
+            <Field label="How you usually get around (pick any that apply)">
               <div className="flex flex-wrap gap-1.5">
-                {(["walk", "cycle", "drive", "transit"] as CommuteMode[]).map(m => (
-                  <button key={m} onClick={() => update({ ...prefs, commuteMode: m })}
-                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs capitalize transition-colors ${prefs.commuteMode === m
-                      ? "border-primary/40 bg-primary/15 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
-                    <CommuteIcon mode={m} /> {m}
-                  </button>
-                ))}
+                {(["walk", "cycle", "drive", "transit", "motorcycle", "wheelchair"] as CommuteMode[]).map(m => {
+                  const on = prefs.commuteModes.includes(m);
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        const next = on
+                          ? prefs.commuteModes.filter(x => x !== m)
+                          : [...prefs.commuteModes, m];
+                        update({ ...prefs, commuteModes: next.length ? next : [m] });
+                      }}
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs capitalize transition-colors ${on
+                        ? "border-primary/40 bg-primary/15 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
+                      <CommuteIcon mode={m} /> {m === "wheelchair" ? "wheelchair" : m}
+                    </button>
+                  );
+                })}
               </div>
             </Field>
 
@@ -384,6 +427,8 @@ function CommuteIcon({ mode }: { mode: CommuteMode }) {
   if (mode === "cycle") return <Bike className={cls} />;
   if (mode === "drive") return <Car className={cls} />;
   if (mode === "transit") return <Bus className={cls} />;
+  if (mode === "motorcycle") return <Rocket className={cls} />;
+  if (mode === "wheelchair") return <Accessibility className={cls} />;
   return <Footprints className={cls} />;
 }
 
