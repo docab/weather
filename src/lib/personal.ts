@@ -1,15 +1,22 @@
 import type { WeatherData, WeatherHour } from "./types";
 
-export type ActivityKey = "run" | "cycle" | "walk" | "garden" | "photo" | "dining";
-export type CommuteMode = "drive" | "cycle" | "walk" | "transit";
-export type HealthFlag = "asthma" | "hayfever" | "migraine" | "arthritis" | "eczema" | "heart" | "pregnancy";
+export type ActivityKey =
+  | "run" | "cycle" | "walk" | "garden" | "photo" | "dining"
+  | "hike" | "swim" | "yoga" | "tennis" | "football" | "golf"
+  | "gym" | "kids_play" | "birdwatch" | "fish" | "picnic" | "market";
+export type CommuteMode = "drive" | "cycle" | "walk" | "transit" | "motorcycle" | "wheelchair";
+export type HealthFlag =
+  | "asthma" | "hayfever" | "migraine" | "arthritis" | "eczema" | "heart" | "pregnancy"
+  | "copd" | "diabetes" | "raynaud" | "sinusitis" | "dry_eyes"
+  | "low_bp" | "high_bp" | "sensitive_skin" | "menopause" | "insomnia";
 export type HouseholdFlag = "dog" | "kids" | "plants" | "garden" | "car_outside";
 export type Units = "metric" | "imperial";
 
 export interface PersonalPrefs {
   name?: string;
   activities: ActivityKey[];
-  commuteMode: CommuteMode;
+  /** Multiple modes allowed — user often mixes walk + transit, drive + walk etc. */
+  commuteModes: CommuteMode[];
   /** "HH:MM" 24h local */
   commuteOut: string;
   commuteBack: string;
@@ -37,7 +44,7 @@ export interface PersonalPrefs {
 const KEY = "pw.personal.v1";
 export const defaultPersonalPrefs: PersonalPrefs = {
   activities: ["walk", "run"],
-  commuteMode: "walk",
+  commuteModes: ["walk"],
   commuteOut: "08:30",
   commuteBack: "17:30",
   tempSensitivity: 0,
@@ -54,7 +61,12 @@ export function loadPersonalPrefs(): PersonalPrefs {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultPersonalPrefs;
-    return { ...defaultPersonalPrefs, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    // Migrate the old single commuteMode → commuteModes array.
+    if (parsed && typeof parsed.commuteMode === "string" && !parsed.commuteModes) {
+      parsed.commuteModes = [parsed.commuteMode];
+    }
+    return { ...defaultPersonalPrefs, ...parsed };
   } catch { return defaultPersonalPrefs; }
 }
 export function savePersonalPrefs(p: PersonalPrefs) {
@@ -64,19 +76,32 @@ export function savePersonalPrefs(p: PersonalPrefs) {
 export const ACTIVITY_LABEL: Record<ActivityKey, string> = {
   run: "Running", cycle: "Cycling", walk: "Walking",
   garden: "Gardening", photo: "Photography", dining: "Outdoor dining",
+  hike: "Hiking", swim: "Open-water swim", yoga: "Outdoor yoga",
+  tennis: "Tennis", football: "Football / 5-a-side", golf: "Golf",
+  gym: "Gym", kids_play: "Kids' park play", birdwatch: "Birdwatching",
+  fish: "Fishing", picnic: "Picnic", market: "Outdoor market",
 };
 export const ACTIVITY_ICON: Record<ActivityKey, string> = {
   run: "🏃", cycle: "🚴", walk: "🚶", garden: "🌱", photo: "📷", dining: "🍷",
+  hike: "🥾", swim: "🏊", yoga: "🧘", tennis: "🎾", football: "⚽", golf: "🏌️",
+  gym: "🏋️", kids_play: "🛝", birdwatch: "🦉", fish: "🎣", picnic: "🧺", market: "🛍️",
 };
 
 export const HEALTH_LABEL: Record<HealthFlag, string> = {
   asthma: "Asthma", hayfever: "Hay fever", migraine: "Migraines",
   arthritis: "Joint pain", eczema: "Eczema / dry skin",
   heart: "Heart condition", pregnancy: "Pregnancy",
+  copd: "COPD / chronic bronchitis", diabetes: "Diabetes",
+  raynaud: "Raynaud's / cold hands", sinusitis: "Sinus issues",
+  dry_eyes: "Dry eyes", low_bp: "Low blood pressure", high_bp: "High blood pressure",
+  sensitive_skin: "Sensitive skin / rosacea", menopause: "Menopause",
+  insomnia: "Sleep issues",
 };
 export const HEALTH_ICON: Record<HealthFlag, string> = {
   asthma: "🫁", hayfever: "🤧", migraine: "🤕",
   arthritis: "🦴", eczema: "🧴", heart: "❤️", pregnancy: "🤰",
+  copd: "🌬️", diabetes: "🩸", raynaud: "🥶", sinusitis: "👃", dry_eyes: "👁️",
+  low_bp: "📉", high_bp: "📈", sensitive_skin: "🌸", menopause: "🔥", insomnia: "😴",
 };
 
 export const HOUSEHOLD_LABEL: Record<HouseholdFlag, string> = {
