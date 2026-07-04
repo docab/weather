@@ -13,9 +13,6 @@ import { LocalTimeCard } from "./LocalTimeCard";
 export function HowItFeelsCard({ conditions }: { conditions: LocationConditions }) {
   const [open, setOpen] = useState(false);
   const w = conditions.weather;
-  const now = w.hourly[0];
-  const soon = w.hourly.slice(1, 3);
-  const nextLine = useMemo(() => buildNextLine(now, soon), [now, soon]);
   const patterns = useMemo(() => groupPatterns(w.hourly.slice(0, 24), w.timezone), [w]);
 
   return (
@@ -36,8 +33,7 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
           />
         </div>
         <p className="text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
-        <p className="mt-3 text-sm text-foreground/85"><span className="font-semibold text-foreground">Next 2 hours:</span> {nextLine}</p>
-        <p className="mt-2 text-sm text-foreground/85">
+        <p className="mt-3 text-sm text-foreground/85">
           <span className="font-semibold text-foreground">Indoors (no AC):</span> {indoorEstimate(w.temp, w.hourly)}
         </p>
         <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
