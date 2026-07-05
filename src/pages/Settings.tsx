@@ -50,7 +50,8 @@ export default function Settings() {
   };
 
   const addLocation = (loc: Location) => {
-    const next = [...locations.filter(l => l.id !== loc.id), loc].slice(-2);
+    // Allow up to 9 manually-saved locations (plus 1 auto-detected = 10 total).
+    const next = [...locations.filter(l => l.id !== loc.id), loc].slice(-9);
     setLocations(next);
     saveLocations(next);
   };
@@ -79,7 +80,7 @@ export default function Settings() {
     }
   };
 
-  const canAddMore = locations.length < 2;
+  const canAddMore = locations.length < 9;
 
   return (
     <div className="min-h-screen pb-16">
@@ -94,7 +95,7 @@ export default function Settings() {
 
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
         {/* Locations */}
-        <Section title="Locations" subtitle="Up to 3 — your current location plus 2 saved">
+        <Section title="Locations" subtitle="Up to 10 — your current location plus 9 saved">
           <div className="space-y-2">
             {allLocations.map(loc => (
               <div key={loc.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
