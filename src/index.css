@@ -92,6 +92,8 @@
 
   html {
     color-scheme: dark;
+    background: hsl(var(--background));
+    min-height: 100%;
   }
 
   body {
@@ -99,6 +101,11 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
+    /* Ensure the background paints under the notch / status bar area
+       when the page is served as a PWA / installed app. */
+    background: hsl(var(--background));
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Numeric tabular feel for big readings */
@@ -156,6 +163,12 @@
     -webkit-backdrop-filter: blur(14px) saturate(150%);
     border: 1px solid hsl(var(--foreground) / 0.10);
   }
+
+  /* Keep Leaflet map tiles from poking above modals / sticky headers. */
+  .leaflet-container { z-index: 0; isolation: isolate; }
+
+  .safe-top    { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
 }
 
 /* =====================================================================
