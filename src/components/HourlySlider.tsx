@@ -46,7 +46,13 @@ export function HourlySlider({ conditions }: { conditions: LocationConditions })
           </div>
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Tap for details</div>
         </header>
-        <div ref={scrollRef} className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+        <div
+          ref={scrollRef}
+          data-noswipe
+          onTouchStartCapture={(e) => e.stopPropagation()}
+          onTouchEndCapture={(e) => e.stopPropagation()}
+          className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 scrollbar-thin touch-pan-x"
+        >
           {hours.map((h, i) => {
             const info = describeWeather(h.weatherCode, isDayHour(h.time, tz));
             const Icon = info.Icon;
