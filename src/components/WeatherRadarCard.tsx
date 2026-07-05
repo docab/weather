@@ -130,8 +130,14 @@ export function WeatherRadarCard({ conditions }: { conditions: LocationCondition
           <LayerBtn active={layer === "clouds"} onClick={() => setLayer("clouds")} icon={<Cloud className="h-3 w-3" />} label="Clouds" />
         </div>
       </div>
-      <div className="relative">
-        <div ref={containerRef} className="h-56 w-full" />
+      <div className="relative isolate">
+        <div
+          ref={containerRef}
+          data-noswipe
+          onTouchStartCapture={(e) => e.stopPropagation()}
+          onTouchEndCapture={(e) => e.stopPropagation()}
+          className="h-56 w-full"
+        />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-background/90 to-transparent px-3 pb-2 pt-6 text-[10px]">
           <button
             onClick={() => setPlaying(p => !p)}

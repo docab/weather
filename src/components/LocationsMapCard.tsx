@@ -98,7 +98,13 @@ export function LocationsMapCard({ locations, activeId, onSelect }: Props) {
         .leaflet-tooltip { background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); border: 1px solid hsl(var(--border)); box-shadow: none; font-size: 11px; }
         .leaflet-tooltip-top:before { border-top-color: hsl(var(--border)); }
         .leaflet-control-attribution { background: hsl(var(--background) / .6) !important; color: hsl(var(--muted-foreground)) !important; font-size: 9px !important; }`}</style>
-      <div ref={containerRef} className="h-56 w-full" />
+      <div
+        ref={containerRef}
+        data-noswipe
+        onTouchStartCapture={(e) => e.stopPropagation()}
+        onTouchEndCapture={(e) => e.stopPropagation()}
+        className="h-56 w-full"
+      />
     </div>
   );
 }

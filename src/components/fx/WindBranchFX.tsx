@@ -10,11 +10,14 @@ function seasonFor(date: Date, lat = 51): Season {
   return s[m];
 }
 
+// Higher saturation + opacity so the branch reads clearly against every
+// hero sky (cream/butter mid-range especially). Trunk uses a warmer bark
+// tone; leaves stay season-tinted.
 const PALETTE: Record<Season, { branch: [string, string]; leaf: [string, string]; flower?: [string, string]; showFlowers: boolean; leafDensity: number }> = {
-  spring:  { branch: ["hsl(30 20% 88% / 0.85)", "hsl(30 25% 55% / 0.45)"], leaf: ["hsl(120 55% 88% / 0.9)", "hsl(140 55% 62% / 0.5)"], flower: ["hsl(330 80% 88% / 0.95)", "hsl(340 70% 68% / 0.6)"], showFlowers: true, leafDensity: 30 },
-  summer:  { branch: ["hsl(30 15% 78% / 0.85)", "hsl(30 20% 45% / 0.45)"], leaf: ["hsl(130 60% 78% / 0.9)", "hsl(140 60% 42% / 0.55)"], showFlowers: false, leafDensity: 42 },
-  autumn:  { branch: ["hsl(25 30% 55% / 0.85)", "hsl(20 30% 30% / 0.45)"], leaf: ["hsl(30 85% 60% / 0.9)", "hsl(12 80% 42% / 0.55)"], showFlowers: false, leafDensity: 26 },
-  winter:  { branch: ["hsl(25 15% 45% / 0.85)", "hsl(20 15% 25% / 0.45)"], leaf: ["hsl(20 25% 60% / 0.6)", "hsl(20 25% 35% / 0.3)"], showFlowers: false, leafDensity: 4 },
+  spring:  { branch: ["hsl(24 45% 32% / 0.98)", "hsl(20 40% 18% / 0.90)"], leaf: ["hsl(120 60% 55% / 0.95)", "hsl(140 65% 32% / 0.85)"], flower: ["hsl(340 85% 78% / 0.98)", "hsl(348 75% 55% / 0.85)"], showFlowers: true, leafDensity: 42 },
+  summer:  { branch: ["hsl(26 40% 28% / 0.98)", "hsl(20 40% 15% / 0.92)"], leaf: ["hsl(130 60% 42% / 0.98)", "hsl(140 65% 22% / 0.88)"], showFlowers: false, leafDensity: 56 },
+  autumn:  { branch: ["hsl(22 55% 25% / 0.98)", "hsl(18 60% 12% / 0.92)"], leaf: ["hsl(28 92% 52% / 0.98)", "hsl(10 85% 34% / 0.88)"], showFlowers: false, leafDensity: 40 },
+  winter:  { branch: ["hsl(24 25% 22% / 0.98)", "hsl(20 20% 10% / 0.92)"], leaf: ["hsl(20 20% 45% / 0.75)", "hsl(20 20% 22% / 0.55)"], showFlowers: false, leafDensity: 6 },
 };
 
 /**
@@ -30,7 +33,7 @@ export function WindBranchFX({ mph, className = "", latitude }: { mph: number; c
   const amp = Math.min(14, 2 + mph * 0.3);
   const dur = Math.max(1.4, 4 - mph * 0.05); // faster with more wind
   const style: CSSProperties = {
-    filter: "blur(1.5px)",
+    filter: "blur(0.6px) drop-shadow(0 4px 8px rgb(0 0 0 / 0.35))",
     ["--sway-amp" as never]: `${amp}deg`,
     ["--sway-dur" as never]: `${dur.toFixed(2)}s`,
   };
@@ -44,10 +47,10 @@ export function WindBranchFX({ mph, className = "", latitude }: { mph: number; c
     [50,72,-5],[38,58,45],[30,64,-10],[24,50,20],[144,88,-5],[136,74,-35],[122,80,40],[100,72,-40],
     [80,42,-20],[76,36,35],
   ];
-  const shown = points.slice(0, Math.max(2, pal.leafDensity));
+  const shown = points.slice(0, Math.max(2, Math.min(points.length, pal.leafDensity)));
   const flowerPoints = pal.showFlowers ? points.slice(1, 14).filter((_, i) => i % 2 === 0) : [];
   return (
-    <div className={`pointer-events-none absolute -bottom-4 -right-6 h-40 w-56 opacity-40 ${className}`} style={style}>
+    <div className={`pointer-events-none absolute -bottom-6 -right-8 h-72 w-96 opacity-90 ${className}`} style={style}>
       <style>{`
         @keyframes wb-sway {
           0%,100% { transform: rotate(calc(var(--sway-amp) * -0.4)); }
@@ -75,17 +78,18 @@ export function WindBranchFX({ mph, className = "", latitude }: { mph: number; c
             </radialGradient>
           )}
         </defs>
-        {/* Main branch */}
-        <path d="M200,150 C160,110 130,90 90,70 C60,55 40,35 10,10" stroke="url(#wb-brk)" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+        {/* Main branch — thicker, with a soft rim-light for a real-wood feel. */}
+        <path d="M200,150 C160,110 130,90 90,70 C60,55 40,35 10,10" stroke="url(#wb-brk)" strokeWidth="8" strokeLinecap="round" fill="none" />
+        <path d="M200,150 C160,110 130,90 90,70 C60,55 40,35 10,10" stroke="hsl(0 0% 100% / 0.18)" strokeWidth="1.4" strokeLinecap="round" fill="none" transform="translate(-1 -1)" />
         {/* Secondary limbs */}
-        <path d="M150,110 C142,96 138,84 132,68" stroke="url(#wb-brk)" strokeWidth="2.8" strokeLinecap="round" fill="none" />
-        <path d="M130,88 C120,70 110,60 100,40" stroke="url(#wb-brk)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-        <path d="M110,78 C102,64 96,52 92,38" stroke="url(#wb-brk)" strokeWidth="2" strokeLinecap="round" fill="none" />
-        <path d="M90,70 C80,80 70,86 55,90" stroke="url(#wb-brk)" strokeWidth="2" strokeLinecap="round" fill="none" />
-        <path d="M70,64 C58,54 46,50 30,44" stroke="url(#wb-brk)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        <path d="M150,110 C142,96 138,84 132,68" stroke="url(#wb-brk)" strokeWidth="5" strokeLinecap="round" fill="none" />
+        <path d="M130,88 C120,70 110,60 100,40" stroke="url(#wb-brk)" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+        <path d="M110,78 C102,64 96,52 92,38" stroke="url(#wb-brk)" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+        <path d="M90,70 C80,80 70,86 55,90" stroke="url(#wb-brk)" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+        <path d="M70,64 C58,54 46,50 30,44" stroke="url(#wb-brk)" strokeWidth="3.2" strokeLinecap="round" fill="none" />
         {/* Twigs */}
-        <path d="M132,68 C126,60 122,54 118,46" stroke="url(#wb-brk)" strokeWidth="1.4" strokeLinecap="round" fill="none" />
-        <path d="M100,40 C96,32 92,26 84,18" stroke="url(#wb-brk)" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+        <path d="M132,68 C126,60 122,54 118,46" stroke="url(#wb-brk)" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        <path d="M100,40 C96,32 92,26 84,18" stroke="url(#wb-brk)" strokeWidth="2" strokeLinecap="round" fill="none" />
         {/* Leaves — teardrop shapes, denser cluster near tips. Seasonal palette. */}
         {shown.map(([x, y, rot], i) => (
           <g

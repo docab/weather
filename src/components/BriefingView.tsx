@@ -79,11 +79,11 @@ function BriefingRow({
         cloudCover: weather.cloudCover, uvIndex: weather.uvIndex, isDay: weather.isDay,
       })}
     >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/40 via-transparent to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/70 via-background/40 to-background/20" />
       <div className="relative flex items-center gap-4">
         <SkyIcon className="h-12 w-12 shrink-0 text-foreground/85" strokeWidth={1.5} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground/85">
             {location.isAutoDetected
               ? <Locate className="h-3 w-3" />
               : <MapPin className="h-3 w-3" />}
@@ -94,11 +94,11 @@ function BriefingRow({
                 : location.country && <span className="opacity-60"> · {location.country}</span>}
             </span>
           </div>
-          <div className="mt-0.5 flex items-baseline gap-2 tabular">
-            <span className="text-3xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
-            <span className="text-xs text-muted-foreground">feels · {info.short.toLowerCase()}</span>
+          <div className="mt-0.5 flex items-baseline gap-2 tabular [text-shadow:0_1px_2px_rgb(0_0_0_/_0.35)]">
+            <span className="text-3xl font-bold leading-none text-foreground">{Math.round(weather.feelsLike)}°</span>
+            <span className="text-xs font-medium text-foreground/85">feels · {info.short.toLowerCase()}</span>
           </div>
-          <p className="mt-1 line-clamp-2 text-xs text-foreground/85">
+          <p className="mt-1 line-clamp-2 text-xs text-foreground/90 [text-shadow:0_1px_2px_rgb(0_0_0_/_0.35)]">
             {firstSentence(data.narrative)}
           </p>
         </div>
