@@ -12,13 +12,13 @@ import { useConditionsForLocations } from "@/hooks/useConditions";
 import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations } from "@/lib/storage";
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane } from "lucide-react";
+import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
 import { dynamicSkyStyle, describeWeather } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
-const MAX_LOCATIONS = 7;
-const MAX_SAVED = 6; // + 1 auto-detected
+const MAX_LOCATIONS = 10;
+const MAX_SAVED = 9; // + 1 auto-detected = 10 total
 
 type TabKey = "briefing" | "today" | "forecast" | "stars" | "travel" | "me";
 const TAB_ORDER: TabKey[] = ["briefing", "today", "forecast", "stars", "travel", "me"];
@@ -72,6 +72,14 @@ const Index = () => {
 
   // Swipe left/right to change tabs
   const onTouchStart = (e: React.TouchEvent) => {
+    // Ignore swipes that begin over horizontally-scrollable content
+    // (hourly slider, maps, radar) — otherwise scrolling the widget
+    // would change tabs.
+    const t = e.target as HTMLElement | null;
+    if (t && t.closest && t.closest("[data-noswipe]")) {
+      touchStartX.current = null; touchStartY.current = null;
+      return;
+    }
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
@@ -80,7 +88,9 @@ const Index = () => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     touchStartX.current = null; touchStartY.current = null;
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+    // Require a clearly horizontal gesture with a healthy amplitude so
+    // ordinary vertical page scrolling can't accidentally swap tabs.
+    if (Math.abs(dx) < 90 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
     const idx = TAB_ORDER.indexOf(activeTab);
     const next = dx < 0 ? Math.min(TAB_ORDER.length - 1, idx + 1) : Math.max(0, idx - 1);
     if (next !== idx) setActiveTab(TAB_ORDER[next]);
@@ -102,9 +112,11 @@ const Index = () => {
     : { background: "hsl(var(--background))" };
 
   const NowIcon = skyInfo?.Icon ?? Eye;
+  const activeLocation = allLocations[activeIdx] ?? allLocations[0];
+  const showLocationHeader = activeTab !== "briefing" && !!activeLocation;
 
   return (
-    <div className="relative min-h-screen pb-24" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="relative min-h-[100dvh] pb-32" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
           The Stars tab swaps in aurora + meteor showers. */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={pageBgStyle as React.CSSProperties}>
@@ -115,7 +127,25 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/55 to-background/80" />
       </div>
 
-      <main className="mx-auto max-w-2xl px-4 pt-4">
+      {showLocationHeader && (
+        <div className="sticky top-0 z-30 -mx-4 mb-2 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 backdrop-blur-xl bg-background/40">
+          <div className="mx-auto flex max-w-2xl items-center justify-center">
+            <button
+              onClick={() => setActiveTab("briefing")}
+              className="flex items-center gap-2 rounded-full glass-pill px-4 py-2 text-sm font-semibold shadow-card"
+              aria-label="Change location"
+            >
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="max-w-[60vw] truncate">
+                {activeLocation.customName || activeLocation.name}
+              </span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <main className="mx-auto max-w-2xl px-4 pt-4 safe-top">
         {noLocation && (
           <div className="my-8 rounded-2xl border border-border bg-card p-6 text-center shadow-card">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
@@ -145,11 +175,20 @@ const Index = () => {
         {allLocations.length > 0 && (
           <div className="w-full">
             {activeTab === "briefing" && (
-              <BriefingView
-                locations={allLocations}
-                queries={queries}
-                onOpenLocation={(id) => { handleSelect(id); setActiveTab("today"); }}
-              />
+              <>
+                <BriefingView
+                  locations={allLocations}
+                  queries={queries}
+                  onOpenLocation={(id) => { handleSelect(id); setActiveTab("today"); }}
+                />
+                {allLocations.length < MAX_LOCATIONS && (
+                  <div className="mt-3 flex justify-center">
+                    <Button variant="secondary" onClick={() => setAddOpen(true)} className="rounded-full">
+                      <Plus className="mr-1 h-4 w-4" /> Add place ({allLocations.length}/{MAX_LOCATIONS})
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
             {activeTab === "today" && (
               <>
@@ -184,27 +223,33 @@ const Index = () => {
         </p>
       </main>
 
-      {/* Bottom navigation — icon-first, order per spec. */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto grid max-w-2xl grid-cols-6 gap-1 px-2 py-2 text-[10px]">
-          <TabBtn active={activeTab === "briefing"} onClick={() => setActiveTab("briefing")} label="Glance">
-            <Eye className="h-5 w-5" />
-          </TabBtn>
-          <TabBtn active={activeTab === "today"} onClick={() => setActiveTab("today")} label="Now">
-            <NowIcon className="h-5 w-5" />
-          </TabBtn>
-          <TabBtn active={activeTab === "forecast"} onClick={() => setActiveTab("forecast")} label="Forecast">
-            <CalendarDays className="h-5 w-5" />
-          </TabBtn>
-          <TabBtn active={activeTab === "stars"} onClick={() => setActiveTab("stars")} label="Sky">
-            <Sunrise className="h-5 w-5" />
-          </TabBtn>
-          <TabBtn active={activeTab === "travel"} onClick={() => setActiveTab("travel")} label="Travel">
-            <Plane className="h-5 w-5" />
-          </TabBtn>
-          <TabBtn active={activeTab === "me"} onClick={() => setActiveTab("me")} label="Me">
-            <User className="h-5 w-5" />
-          </TabBtn>
+      {/* Bottom navigation — iOS 26-style floating liquid-glass pill.
+          Larger hit targets, lifted off the home-indicator area. */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 pointer-events-none"
+        aria-label="Primary"
+      >
+        <div className="pointer-events-auto mx-auto max-w-2xl rounded-[2rem] glass-card px-2 py-2 shadow-2xl">
+          <div className="grid grid-cols-6 gap-1">
+            <TabBtn active={activeTab === "briefing"} onClick={() => setActiveTab("briefing")} label="Glance">
+              <Eye className="h-6 w-6" />
+            </TabBtn>
+            <TabBtn active={activeTab === "today"} onClick={() => setActiveTab("today")} label="Now">
+              <NowIcon className="h-6 w-6" />
+            </TabBtn>
+            <TabBtn active={activeTab === "forecast"} onClick={() => setActiveTab("forecast")} label="Forecast">
+              <CalendarDays className="h-6 w-6" />
+            </TabBtn>
+            <TabBtn active={activeTab === "stars"} onClick={() => setActiveTab("stars")} label="Sky">
+              <Sunrise className="h-6 w-6" />
+            </TabBtn>
+            <TabBtn active={activeTab === "travel"} onClick={() => setActiveTab("travel")} label="Travel">
+              <Plane className="h-6 w-6" />
+            </TabBtn>
+            <TabBtn active={activeTab === "me"} onClick={() => setActiveTab("me")} label="Me">
+              <User className="h-6 w-6" />
+            </TabBtn>
+          </div>
         </div>
       </nav>
 
@@ -221,12 +266,12 @@ function TabBtn({ active, onClick, label, children }: {
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 transition ${active
-        ? "bg-primary/15 text-primary"
+      className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl py-2 transition active:scale-95 ${active
+        ? "bg-primary/20 text-primary shadow-inner"
         : "text-muted-foreground hover:text-foreground"}`}
     >
       {children}
-      <span className="text-[10px] font-semibold">{label}</span>
+      <span className="text-[11px] font-semibold">{label}</span>
     </button>
   );
 }
