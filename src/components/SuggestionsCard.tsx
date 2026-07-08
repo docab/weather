@@ -1,8 +1,9 @@
+import { useState } from "react";
 import type { LocationConditions } from "@/lib/types";
 import { AnimatedUmbrella } from "./fx/WeatherFX";
 import { ClothingIcon } from "./icons/ClothingIcon";
 import { PerfumeBottle } from "./icons/PerfumeBottle";
-import { Package, Droplet, Pill, Sparkles, Sun, Shield } from "lucide-react";
+import { Package, Droplet, Pill, Sparkles, Sun, Shield, ChevronDown } from "lucide-react";
 import { sweatEstimate } from "@/lib/explainers";
 import { loadPersonalPrefs } from "@/lib/personal";
 
@@ -14,6 +15,7 @@ import { loadPersonalPrefs } from "@/lib/personal";
 export function SuggestionsCard({ conditions }: { conditions: LocationConditions }) {
   const w = conditions.weather;
   const prefs = loadPersonalPrefs();
+  const [open, setOpen] = useState(false);
   const needUmbrella = w.precipProb >= 40;
   const sweat = sweatEstimate(w.feelsLike, w.humidity);
   const water = waterLine(w.feelsLike, w.humidity);
@@ -24,22 +26,32 @@ export function SuggestionsCard({ conditions }: { conditions: LocationConditions
 
   return (
     <section id="suggestions" className="glass-card p-5 shadow-card animate-fade-in-up">
-      <header className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="mb-4 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+        aria-expanded={open}
+      >
         <Package className="h-3.5 w-3.5 text-primary" /> Suggestions
-      </header>
+        <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Row icon={<ClothingIcon weather={w} size={20} />} label="Wear" text={conditions.outfit}
              sub={`Expect ~${sweat.litres}L/hr sweat if active. ${sweat.note}`} />
         <Row icon={<AnimatedUmbrella open={needUmbrella} size={22} />} label="Umbrella" text={conditions.umbrella} />
-        <Row icon={<PerfumeBottle size={22} />} label="Fragrance" text={conditions.perfume} />
-        <Row icon={<Droplet className="h-5 w-5" />} label="Hydration" text={water} />
-        {antihist && <Row icon={<Pill className="h-5 w-5" />} label="Antihistamines" text={antihist} />}
-        {w.uvIndex >= 6 && (
-          <Row icon={<Sun className="h-5 w-5" />} label="Sun protection"
-               text={`UV ${Math.round(w.uvIndex)} — SPF ${w.uvIndex >= 8 ? "50" : "30"}, hat and sunnies for anything over 20 minutes outside.`} />
+        {open && (
+          <>
+            <Row icon={<PerfumeBottle size={22} />} label="Fragrance" text={conditions.perfume} />
+            <Row icon={<Droplet className="h-5 w-5" />} label="Hydration" text={water} />
+            {antihist && <Row icon={<Pill className="h-5 w-5" />} label="Antihistamines" text={antihist} />}
+            {w.uvIndex >= 6 && (
+              <Row icon={<Sun className="h-5 w-5" />} label="Sun protection"
+                   text={`UV ${Math.round(w.uvIndex)} — SPF ${w.uvIndex >= 8 ? "50" : "30"}, hat and sunnies for anything over 20 minutes outside.`} />
+            )}
+          </>
         )}
-        {smart.length > 0 && (
+        {open && smart.length > 0 && (
           <div className="sm:col-span-2 rounded-2xl border border-primary/30 bg-primary/10 p-3">
             <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-primary">
               <Sparkles className="h-3.5 w-3.5" /> Smart follow-ons
