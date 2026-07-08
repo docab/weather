@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LocationView, LocationViewSkeleton } from "@/components/LocationView";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
@@ -30,8 +30,6 @@ const Index = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("today");
   const queryClient = useQueryClient();
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
 
   const allLocations: Location[] = useMemo(() => {
     const list: Location[] = [];
@@ -80,31 +78,8 @@ const Index = () => {
     savePrimaryId(id);
   };
 
-  // Swipe left/right to change tabs
-  const onTouchStart = (e: React.TouchEvent) => {
-    // Ignore swipes that begin over horizontally-scrollable content
-    // (hourly slider, maps, radar) — otherwise scrolling the widget
-    // would change tabs.
-    const t = e.target as HTMLElement | null;
-    if (t && t.closest && t.closest("[data-noswipe]")) {
-      touchStartX.current = null; touchStartY.current = null;
-      return;
-    }
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current == null || touchStartY.current == null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    touchStartX.current = null; touchStartY.current = null;
-    // Require a clearly horizontal gesture with a healthy amplitude so
-    // ordinary vertical page scrolling can't accidentally swap tabs.
-    if (Math.abs(dx) < 90 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-    const idx = TAB_ORDER.indexOf(activeTab);
-    const next = dx < 0 ? Math.min(TAB_ORDER.length - 1, idx + 1) : Math.max(0, idx - 1);
-    if (next !== idx) setActiveTab(TAB_ORDER[next]);
-  };
+  // Swipe-to-change-tab intentionally removed — tab content stays fixed to
+  // the background. Tabs change only via the bottom navigation.
 
   const noLocation = !geo.location && !savedLocations.length;
 
@@ -126,7 +101,7 @@ const Index = () => {
   const showLocationHeader = activeTab !== "briefing" && !!activeLocation;
 
   return (
-    <div className="relative min-h-[100dvh] pb-32" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="relative min-h-[100dvh] pb-32">
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
           The Stars tab swaps in aurora + meteor showers. */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={pageBgStyle as React.CSSProperties}>
@@ -134,7 +109,8 @@ const Index = () => {
           ? <><AuroraFX active={meteorActive} /><MeteorFX active={meteorActive} /></>
           : activeWeather && <WeatherFX weather={activeWeather} intensity={1} />}
         {/* Soft veil for legibility — lighter than before so the sky shows through. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/20 to-background/45" />
+        {/* Very subtle veil — hero sky bleeds through on every tab. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/25" />
       </div>
 
       {showLocationHeader && (
