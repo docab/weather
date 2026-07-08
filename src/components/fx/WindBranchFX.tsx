@@ -33,7 +33,7 @@ export function WindBranchFX({ mph, className = "", latitude }: { mph: number; c
   const amp = Math.min(14, 2 + mph * 0.3);
   const dur = Math.max(1.4, 4 - mph * 0.05); // faster with more wind
   const style: CSSProperties = {
-    filter: "blur(0.6px) drop-shadow(0 4px 8px rgb(0 0 0 / 0.35))",
+    filter: "blur(2.4px) drop-shadow(0 3px 6px rgb(0 0 0 / 0.30))",
     ["--sway-amp" as never]: `${amp}deg`,
     ["--sway-dur" as never]: `${dur.toFixed(2)}s`,
   };
@@ -50,7 +50,7 @@ export function WindBranchFX({ mph, className = "", latitude }: { mph: number; c
   const shown = points.slice(0, Math.max(2, Math.min(points.length, pal.leafDensity)));
   const flowerPoints = pal.showFlowers ? points.slice(1, 14).filter((_, i) => i % 2 === 0) : [];
   return (
-    <div className={`pointer-events-none absolute -bottom-6 -right-8 h-72 w-96 opacity-90 ${className}`} style={style}>
+    <div className={`pointer-events-none absolute -top-4 -right-6 h-44 w-64 opacity-75 ${className}`} style={style}>
       <style>{`
         @keyframes wb-sway {
           0%,100% { transform: rotate(calc(var(--sway-amp) * -0.4)); }
