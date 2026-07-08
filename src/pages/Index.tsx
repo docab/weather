@@ -124,15 +124,15 @@ const Index = () => {
           ? <><AuroraFX active={meteorActive} /><MeteorFX active={meteorActive} /></>
           : activeWeather && <WeatherFX weather={activeWeather} intensity={1} />}
         {/* Soft veil for legibility — lighter than before so the sky shows through. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/55 to-background/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/20 to-background/45" />
       </div>
 
       {showLocationHeader && (
-        <div className="sticky top-0 z-30 -mx-4 mb-2 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 backdrop-blur-xl bg-background/40">
+        <div className="sticky top-0 z-30 -mx-4 mb-1 px-4 pt-[calc(env(safe-area-inset-top)+0.15rem)] pb-1.5 backdrop-blur-xl bg-background/20">
           <div className="mx-auto flex max-w-2xl items-center justify-center">
             <button
               onClick={() => setActiveTab("briefing")}
-              className="flex items-center gap-2 rounded-full glass-pill px-4 py-2 text-sm font-semibold shadow-card"
+              className="flex items-center gap-2 rounded-full glass-pill px-5 py-2.5 text-base font-semibold shadow-card"
               aria-label="Change location"
             >
               <MapPin className="h-4 w-4 text-primary" />
@@ -145,7 +145,7 @@ const Index = () => {
         </div>
       )}
 
-      <main className="mx-auto max-w-2xl px-4 pt-4 safe-top">
+      <main className={`mx-auto max-w-2xl px-4 ${showLocationHeader ? "pt-1" : "pt-4 safe-top"}`}>
         {noLocation && (
           <div className="my-8 rounded-2xl border border-border bg-card p-6 text-center shadow-card">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
