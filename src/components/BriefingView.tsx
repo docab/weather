@@ -2,7 +2,7 @@ import type { LocationConditions, Location } from "@/lib/types";
 import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
 import { aqiLabel, severityLabel } from "@/lib/severity";
 import { SeverityBadge } from "./SeverityBadge";
-import { MapPin, Locate, Loader2, AlertCircle, ArrowRight } from "lucide-react";
+import { MapPin, Locate, Loader2, AlertCircle, ArrowRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { LocationsMapCard } from "./LocationsMapCard";
@@ -11,13 +11,14 @@ interface Props {
   locations: Location[];
   queries: UseQueryResult<LocationConditions, unknown>[];
   onOpenLocation: (id: string) => void;
+  onRemoveLocation?: (id: string) => void;
 }
 
 /**
  * Briefing — at-a-glance live snapshot for every saved place.
  * Tap a card to jump into its full Today view.
  */
-export function BriefingView({ locations, queries, onOpenLocation }: Props) {
+export function BriefingView({ locations, queries, onOpenLocation, onRemoveLocation }: Props) {
   if (!locations.length) return null;
   return (
     <div className="space-y-3 animate-fade-in-up">
@@ -35,6 +36,7 @@ export function BriefingView({ locations, queries, onOpenLocation }: Props) {
             loading={q?.isLoading}
             error={q?.isError}
             onClick={() => onOpenLocation(loc.id)}
+            onRemove={!loc.isAutoDetected && onRemoveLocation ? () => onRemoveLocation(loc.id) : undefined}
           />
         );
       })}
@@ -43,13 +45,14 @@ export function BriefingView({ locations, queries, onOpenLocation }: Props) {
 }
 
 function BriefingRow({
-  location, data, loading, error, onClick,
+  location, data, loading, error, onClick, onRemove,
 }: {
   location: Location;
   data?: LocationConditions;
   loading?: boolean;
   error?: boolean;
   onClick: () => void;
+  onRemove?: () => void;
 }) {
   if (loading) {
     return (
@@ -106,6 +109,18 @@ function BriefingRow({
           <SeverityBadge level={pollen.level} label={`Pollen ${severityLabel[pollen.level]}`} size="sm" />
           <SeverityBadge level={aqi.level} label={`AQI ${aqiLabel(aqi.index)}`} size="sm" />
         </div>
+        {onRemove && (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Remove location"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onRemove(); } }}
+            className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-background/30 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </span>
+        )}
         <ArrowRight className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", "group-hover:translate-x-0.5")} />
       </div>
       {/* Mobile severity row */}

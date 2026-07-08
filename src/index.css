@@ -137,11 +137,11 @@
   .glass-card {
     position: relative;
     background:
-      linear-gradient(180deg, hsl(var(--foreground) / 0.06) 0%, hsl(var(--foreground) / 0) 38%),
-      hsl(var(--card) / 0.55);
+      linear-gradient(180deg, hsl(var(--foreground) / 0.05) 0%, hsl(var(--foreground) / 0) 38%),
+      hsl(var(--card) / 0.32);
     backdrop-filter: blur(22px) saturate(160%);
     -webkit-backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid hsl(var(--foreground) / 0.10);
+    border: 1px solid hsl(var(--foreground) / 0.08);
     box-shadow:
       inset 0 1px 0 hsl(var(--foreground) / 0.10),
       inset 0 -1px 0 hsl(220 50% 2% / 0.30),
@@ -151,14 +151,14 @@
   .glass-tile {
     background:
       linear-gradient(180deg, hsl(var(--foreground) / 0.05) 0%, hsl(var(--foreground) / 0) 60%),
-      hsl(var(--background) / 0.30);
+      hsl(var(--background) / 0.18);
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
     border: 1px solid hsl(var(--foreground) / 0.07);
     border-radius: 0.85rem;
   }
   .glass-pill {
-    background: hsl(var(--background) / 0.45);
+    background: hsl(var(--background) / 0.28);
     backdrop-filter: blur(14px) saturate(150%);
     -webkit-backdrop-filter: blur(14px) saturate(150%);
     border: 1px solid hsl(var(--foreground) / 0.10);

@@ -32,7 +32,7 @@ export default function Settings() {
     for (const l of locations) {
       if (!geo.location || l.id !== geo.location.id) list.push(l);
     }
-    return list.slice(0, 3);
+    return list.slice(0, 10);
   }, [geo.location, locations]);
 
   useEffect(() => { savePrefs(prefs); }, [prefs]);
@@ -84,7 +84,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen pb-16">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/60 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-3">
           <Button asChild variant="ghost" size="icon" aria-label="Back">
             <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>

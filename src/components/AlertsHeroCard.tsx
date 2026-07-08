@@ -100,7 +100,8 @@ function buildBigChangeAlerts(c: LocationConditions): AlertRow[] {
   const w = c.weather;
   const tz = w.timezone;
   const nowMs = Date.now();
-  const hours = w.hourly.filter(h => new Date(h.time).getTime() >= nowMs).slice(0, 24);
+  // Future-only, next 12h max
+  const hours = w.hourly.filter(h => new Date(h.time).getTime() >= nowMs).slice(0, 12);
   if (hours.length < 3) return [];
 
   type Sig = "rain-heavy" | "rain" | "hot" | "cold" | "windy" | "muggy" | "calm";
@@ -125,8 +126,8 @@ function buildBigChangeAlerts(c: LocationConditions): AlertRow[] {
   // Skip the first cluster if it just describes "now" — Next 2 hours already covers it.
   const rest = clusters.slice(clusters[0]?.hs.length && clusters[0].hs.length <= 2 ? 1 : (clusters[0]?.sig === "calm" ? 1 : 0));
   // Drop trailing calm.
-  const meaningful = rest.filter(c => c.sig !== "calm").slice(0, 4);
-  if (meaningful.length === 0 && rest.length) meaningful.push(rest[0]);
+  // At most one big-change alert; combined with Next-2h we show 2 total.
+  const meaningful = rest.filter(c => c.sig !== "calm").slice(0, 1);
 
   return meaningful.map((cl): AlertRow => {
     const first = cl.hs[0], last = cl.hs[cl.hs.length - 1];
