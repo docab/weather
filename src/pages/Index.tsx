@@ -65,6 +65,16 @@ const Index = () => {
     savePrimaryId(loc.id);
   };
 
+  const removeLocation = (id: string) => {
+    const next = savedLocations.filter(l => l.id !== id);
+    setSavedLocations(next);
+    saveLocations(next);
+    if (activeId === id && allLocations.length) {
+      const remaining = allLocations.find(l => l.id !== id);
+      if (remaining) { setActiveId(remaining.id); savePrimaryId(remaining.id); }
+    }
+  };
+
   const handleSelect = (id: string) => {
     setActiveId(id);
     savePrimaryId(id);
@@ -180,6 +190,7 @@ const Index = () => {
                   locations={allLocations}
                   queries={queries}
                   onOpenLocation={(id) => { handleSelect(id); setActiveTab("today"); }}
+                  onRemoveLocation={removeLocation}
                 />
                 {allLocations.length < MAX_LOCATIONS && (
                   <div className="mt-3 flex justify-center">
