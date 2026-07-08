@@ -28,8 +28,9 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
     if (t >= s) return 1;
     return (t - r) / (s - r);
   })();
-  // Semi-circle arc from (20,90) sunrise → (180,90) sunset, apex at (100,15).
-  const arcCx = 100, arcCy = 90, arcR = 80;
+  // Semi-circle arc spanning the full card width (viewBox 0..200).
+  // Rise at x=6, set at x=194; apex ≈ (100, 6).
+  const arcCx = 100, arcCy = 90, arcR = 94;
   const angle = Math.PI * (1 - progress); // π at rise, 0 at set
   const sunX = arcCx + arcR * Math.cos(angle);
   const sunY = arcCy - arcR * Math.sin(angle);
@@ -60,7 +61,7 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
       {/* Animated sun-arc: solid path from rise to set, with the current
           sun position tracked along it. */}
       <div className="mt-4 rounded-2xl bg-gradient-to-b from-primary/10 to-background/40 p-3">
-        <svg viewBox="0 0 200 110" className="h-24 w-full">
+        <svg viewBox="0 0 200 110" preserveAspectRatio="none" className="h-28 w-full">
           <defs>
             <linearGradient id="sun-arc-grad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0" stopColor="hsl(28 90% 60%)" stopOpacity="0.85" />
@@ -73,29 +74,30 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
             </radialGradient>
           </defs>
           {/* Horizon */}
-          <line x1="10" y1="90" x2="190" y2="90" stroke="hsl(var(--foreground) / 0.25)" strokeDasharray="2 3" />
+          <line x1="2" y1="90" x2="198" y2="90" stroke="hsl(var(--foreground) / 0.25)" strokeDasharray="2 3" />
           {/* Arc */}
           <path
-            d={`M 20 90 A ${arcR} ${arcR} 0 0 1 180 90`}
+            d={`M 6 90 A ${arcR} ${arcR} 0 0 1 194 90`}
             fill="none"
             stroke="url(#sun-arc-grad)"
             strokeWidth="2.5"
             strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
           />
           {/* Endpoint markers */}
-          <circle cx="20" cy="90" r="2.5" fill="hsl(28 80% 60%)" />
-          <text x="20" y="104" textAnchor="middle" fontSize="9" fill="hsl(var(--foreground) / 0.75)" fontWeight="600">
+          <circle cx="6" cy="90" r="2.5" fill="hsl(28 80% 60%)" vectorEffect="non-scaling-stroke" />
+          <text x="14" y="104" textAnchor="middle" fontSize="9" fill="hsl(var(--foreground) / 0.85)" fontWeight="600">
             {fmtTime(ev.rise)}
           </text>
-          <circle cx="180" cy="90" r="2.5" fill="hsl(18 80% 55%)" />
-          <text x="180" y="104" textAnchor="middle" fontSize="9" fill="hsl(var(--foreground) / 0.75)" fontWeight="600">
+          <circle cx="194" cy="90" r="2.5" fill="hsl(18 80% 55%)" vectorEffect="non-scaling-stroke" />
+          <text x="186" y="104" textAnchor="middle" fontSize="9" fill="hsl(var(--foreground) / 0.85)" fontWeight="600">
             {fmtTime(ev.set)}
           </text>
           {/* Current sun position */}
           {!belowHorizon && (
             <g>
-              <circle cx={sunX} cy={sunY} r="10" fill="url(#sun-arc-sun)" opacity="0.35" />
-              <circle cx={sunX} cy={sunY} r="5.5" fill="url(#sun-arc-sun)">
+              <circle cx={sunX} cy={sunY} r="10" fill="url(#sun-arc-sun)" opacity="0.35" vectorEffect="non-scaling-stroke" />
+              <circle cx={sunX} cy={sunY} r="5.5" fill="url(#sun-arc-sun)" vectorEffect="non-scaling-stroke">
                 <animate attributeName="r" values="5;6;5" dur="2.4s" repeatCount="indefinite" />
               </circle>
             </g>

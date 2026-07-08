@@ -32,7 +32,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       )}
       {/* Legibility scrim — darker around the text, transparent at the top.
           Without this, big text disappears on the cream/butter mid-range. */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/3 bottom-0 bg-gradient-to-b from-transparent via-background/25 to-background/55" />
+      <div className="pointer-events-none absolute inset-x-0 top-1/3 bottom-0 bg-gradient-to-b from-transparent via-background/15 to-background/40" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
       <div className="relative [text-shadow:0_1px_2px_rgb(0_0_0_/_0.35)]">
         <div className="flex items-start justify-between gap-3 pt-2">
