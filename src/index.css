@@ -169,6 +169,37 @@
 
   .safe-top    { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+
+  /* -------------------------------------------------------------------
+   * Adaptive ink. The app background is a live sky gradient, so text
+   * contrast has to flip with it. `.ink-light` = pale text on a dark sky,
+   * `.ink-dark` = near-black text on a bright sky. Both use solid,
+   * high-contrast values — no washed-out greys that vanish.
+   * ----------------------------------------------------------------- */
+  .ink-light {
+    --foreground: 0 0% 100%;
+    --card-foreground: 0 0% 100%;
+    --popover-foreground: 0 0% 100%;
+    --muted-foreground: 0 0% 92%;
+    --secondary-foreground: 0 0% 100%;
+    --border: 0 0% 100% / 0.18;
+  }
+  .ink-dark {
+    --foreground: 220 40% 6%;
+    --card-foreground: 220 40% 6%;
+    --popover-foreground: 220 40% 6%;
+    --muted-foreground: 220 25% 18%;
+    --secondary-foreground: 220 40% 6%;
+    --primary: 212 90% 28%;
+    --primary-foreground: 0 0% 100%;
+  }
+  .ink-light .glass-card, .ink-light .glass-tile, .ink-light .glass-pill {
+    background-color: hsl(220 30% 6% / 0.34);
+  }
+  .ink-dark .glass-card, .ink-dark .glass-tile, .ink-dark .glass-pill {
+    background-color: hsl(0 0% 100% / 0.34);
+    border-color: hsl(220 40% 6% / 0.12);
+  }
 }
 
 /* =====================================================================
