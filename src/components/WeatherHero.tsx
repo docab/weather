@@ -1,6 +1,6 @@
 import type { LocationConditions } from "@/lib/types";
-import { describeWeather, dynamicSkyStyle } from "@/lib/weatherCodes";
-import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp } from "lucide-react";
+import { describeWeather, skyOnlyStyle, sunPhaseOf, gradientInk } from "@/lib/weatherCodes";
+import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp, ChevronsDown } from "lucide-react";
 import { WeatherFX, AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
 import { getMoonPhase } from "@/lib/astronomy";
 import { WindBranchFX } from "./fx/WindBranchFX";
@@ -12,16 +12,19 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const isClear = info.sky === "clear";
   const phase = getMoonPhase(new Date());
   const phaseOverlay = sunPhaseOverlay(weather);
+  const solar = sunPhaseOf(Date.now(), weather.daily?.[0]?.sunrise, weather.daily?.[0]?.sunset, weather.isDay);
+  // Hero colour = what the sky looks like, NOT how warm it is.
+  const skyStyle = skyOnlyStyle(info.sky, {
+    cloudCover: weather.cloudCover,
+    precipMm: weather.precipMm,
+    precipProb: weather.precipProb,
+    phase: solar,
+  });
+  const ink = gradientInk(skyStyle);
   return (
     <div
-      className="glass-card relative overflow-hidden p-6 min-h-[420px]"
-      style={dynamicSkyStyle(info.sky, weather.feelsLike, {
-        windSpeed: weather.windSpeed,
-        humidity: weather.humidity,
-        cloudCover: weather.cloudCover,
-        uvIndex: weather.uvIndex,
-        isDay: weather.isDay,
-      })}
+      className={`glass-card relative flex min-h-[86vh] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      style={skyStyle}
     >
       <WeatherFX weather={weather} />
       {/* Frosted branch: sways with wind speed, always drawn behind text. */}
@@ -34,23 +37,24 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
           Without this, big text disappears on the cream/butter mid-range. */}
       <div className="pointer-events-none absolute inset-x-0 top-1/3 bottom-0 bg-gradient-to-b from-transparent via-background/15 to-background/40" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
-      <div className="relative [text-shadow:0_1px_2px_rgb(0_0_0_/_0.35)]">
+      <div className={`relative flex flex-1 flex-col ${ink === "light" ? "[text-shadow:0_1px_3px_rgb(0_0_0_/_0.45)]" : "[text-shadow:0_1px_2px_rgb(255_255_255_/_0.35)]"}`}>
         <div className="flex items-start justify-between gap-3 pt-2">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-widest text-foreground/85">
-              {info.label}
+            <div className="text-4xl font-bold leading-tight tracking-tight">
+              {oneWord(weather, info.sky)}
             </div>
-            <div className="mt-1 tabular">
-              <span className="block text-8xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
-              <span className="mt-1 block text-[11px] uppercase tracking-widest text-foreground/75">
+            <div className="mt-1 text-sm font-medium text-foreground/85">{info.label}</div>
+            <div className="mt-5 tabular">
+              <span className="block text-[11px] uppercase tracking-[0.2em] text-foreground/80">
                 Feels like
               </span>
-              <span className="mt-1 block text-sm text-foreground/70">
-                Actual <span className="font-semibold tabular text-foreground/90">{Math.round(weather.temp)}°</span>
+              <span className="block text-8xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
+              <span className="mt-1 block text-sm text-foreground/80">
+                Actual <span className="font-semibold tabular">{Math.round(weather.temp)}°</span>
               </span>
             </div>
           </div>
-          <div className="flex h-24 w-24 items-center justify-center text-foreground/85">
+          <div className="flex h-24 w-24 items-center justify-center">
             {isClear && weather.isDay
               ? <AnimatedSun size={96} warm={weather.feelsLike >= 22} />
               : isClear && !weather.isDay
@@ -60,13 +64,13 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
         </div>
 
         <div className="mt-8 flex items-center gap-3 text-sm">
-          <span className="inline-flex items-center gap-1 text-foreground/80 tabular">
+          <span className="inline-flex items-center gap-1 tabular">
             <ArrowUp className="h-3.5 w-3.5" /> {Math.round(weather.high)}°
           </span>
-          <span className="inline-flex items-center gap-1 text-foreground/80 tabular">
+          <span className="inline-flex items-center gap-1 tabular">
             <ArrowDown className="h-3.5 w-3.5" /> {Math.round(weather.low)}°
           </span>
-          <span className="ml-2 text-xs text-foreground/75 truncate">
+          <span className="ml-2 truncate text-xs text-foreground/85">
             {conditions.location.customName || conditions.location.name}
           </span>
         </div>
@@ -77,9 +81,40 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
           <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} anchor="more" />
           <Stat icon={<Sun className="h-4 w-4" />} label="UV" value={String(Math.round(weather.uvIndex))} anchor="suggestions" />
         </div>
+
+        {/* Scroll cue — the hero fills the screen, so tell people there's more. */}
+        <button
+          type="button"
+          onClick={() => document.getElementById("howitfeels")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="mx-auto mt-auto flex flex-col items-center gap-0.5 pt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground/75"
+        >
+          Scroll for the day
+          <ChevronsDown className="h-4 w-4 animate-bounce" />
+        </button>
       </div>
     </div>
   );
+}
+
+/**
+ * A single word that sums the sky up at a glance — what you'd say if someone
+ * asked "what's it like out?".
+ */
+function oneWord(w: LocationConditions["weather"], sky: string): string {
+  const mm = w.precipMm ?? 0;
+  if (w.weatherCode >= 95) return "Stormy";
+  if (sky === "snow") return "Snowing";
+  if (mm > 4) return "Pouring";
+  if (mm > 0.05) return mm > 1 ? "Raining" : "Drizzly";
+  if (w.weatherCode === 45 || w.weatherCode === 48) return "Foggy";
+  if (w.windSpeed >= 30) return "Blustery";
+  if (w.precipProb >= 60) return "Showery";
+  if (w.cloudCover >= 85) return "Grey";
+  if (w.cloudCover >= 50) return "Cloudy";
+  if (!w.isDay) return w.cloudCover < 20 ? "Starry" : "Hazy";
+  if (w.feelsLike >= 32) return "Baking";
+  if (w.feelsLike <= 2) return "Freezing";
+  return w.cloudCover < 20 ? "Sunny" : "Bright";
 }
 
 /**
