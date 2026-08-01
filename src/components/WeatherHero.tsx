@@ -33,9 +33,16 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       {phaseOverlay && (
         <div className="pointer-events-none absolute inset-0" style={{ background: phaseOverlay }} />
       )}
-      {/* Legibility scrim — darker around the text, transparent at the top.
-          Without this, big text disappears on the cream/butter mid-range. */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/3 bottom-0 bg-gradient-to-b from-transparent via-background/15 to-background/40" />
+      {/* Legibility scrim — matched to the ink. Dark wash under white text,
+          light wash under black text. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: ink === "light"
+            ? "linear-gradient(180deg, transparent 20%, hsl(220 40% 4% / 0.18) 60%, hsl(220 40% 4% / 0.42) 100%)"
+            : "linear-gradient(180deg, transparent 20%, hsl(0 0% 100% / 0.22) 60%, hsl(0 0% 100% / 0.5) 100%)",
+        }}
+      />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
       <div className={`relative flex flex-1 flex-col ${ink === "light" ? "[text-shadow:0_1px_3px_rgb(0_0_0_/_0.45)]" : "[text-shadow:0_1px_2px_rgb(255_255_255_/_0.35)]"}`}>
         <div className="flex items-start justify-between gap-3 pt-2">
