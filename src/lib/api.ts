@@ -399,6 +399,13 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     pressure: c.pressure_msl,
     dewPoint: c.dew_point_2m,
     precipMm: Math.max(c.rain ?? 0, c.precipitation ?? 0),
+    observedAt: (() => {
+      // Open-Meteo returns `current.time` in the location's local clock when
+      // timezone=auto. Convert back to a real epoch using the reported offset.
+      const off = Number(j.utc_offset_seconds ?? 0);
+      const t = Date.parse(String(c.time ?? "") + "Z");
+      return Number.isFinite(t) ? t - off * 1000 : Date.now();
+    })(),
     hourly: next,
     daily: days,
     timezone: j.timezone || "auto",
