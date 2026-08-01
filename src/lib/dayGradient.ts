@@ -5,11 +5,15 @@
 export function dayGradient(highC: number, sky: string): string {
   const t = Math.max(-10, Math.min(38, highC));
   let hue: number, sat: number, light: number;
+  // Never interpolate straight from blue (205) to yellow (45) — the shortest
+  // path runs through green, which the sky never does. Instead we hold blue,
+  // fade it to a neutral pale, then pick the warm ramp back up.
   if (t < 5)        { hue = lerp(235, 215, (t + 10) / 15); sat = 55; light = 32; }
-  else if (t < 14)  { hue = lerp(215, 205, (t - 5) / 9);    sat = 50; light = 42; }
-  else if (t < 22)  { hue = lerp(205, 45,  (t - 14) / 8);   sat = 55; light = 48; }
-  else if (t < 28)  { hue = lerp(45, 28,   (t - 22) / 6);   sat = 80; light = 52; }
-  else              { hue = lerp(28, 8,    (t - 28) / 7);   sat = 85; light = 50; }
+  else if (t < 14)  { hue = lerp(215, 205, (t - 5) / 9);   sat = 50; light = 42; }
+  else if (t < 19)  { hue = 205; sat = lerp(50, 16, (t - 14) / 5); light = lerp(46, 58, (t - 14) / 5); }
+  else if (t < 22)  { hue = 48;  sat = lerp(18, 46, (t - 19) / 3); light = lerp(60, 56, (t - 19) / 3); }
+  else if (t < 28)  { hue = lerp(46, 28, (t - 22) / 6);    sat = 80; light = 52; }
+  else              { hue = lerp(28, 8,  (t - 28) / 7);    sat = 85; light = 50; }
   if (sky === "rain")   { sat -= 25; light -= 6; }
   if (sky === "cloudy") { sat -= 18; light -= 2; }
   if (sky === "snow")   { sat = 12; light = 70; hue = 210; }
