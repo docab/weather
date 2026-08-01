@@ -32,13 +32,21 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isRain    = codeIsRain || (!isSnow && weather.precipProb >= 70);
   // Match the visual intensity to the actual weather code rather than
   // forcing every wet condition to look like a heavy shower.
-  const rainCategory: "drizzle" | "light" | "moderate" | "heavy" =
+  // Live rainfall rate wins over the code: 6 mm/h is a downpour whatever the
+  // WMO code says, and 0.2 mm/h is a drizzle even under a "heavy rain" code.
+  const mmNow = weather.precipMm ?? 0;
+  const byCode: "drizzle" | "light" | "moderate" | "heavy" =
     isThunder || code === 65 || code === 67 || code === 82 ? "heavy" :
     code === 63 || code === 81 ? "moderate" :
     code === 55 || code === 61 || code === 66 || code === 80 ? "light" :
     code === 51 || code === 53 ? "drizzle" :
-    // precip-probability fallback when code doesn't say rain
     weather.precipProb >= 90 ? "light" : "drizzle";
+  const byRate: "drizzle" | "light" | "moderate" | "heavy" | null =
+    mmNow >= 7.5 ? "heavy" :
+    mmNow >= 2.5 ? "moderate" :
+    mmNow >= 0.5 ? "light" :
+    mmNow > 0.05 ? "drizzle" : null;
+  const rainCategory = byRate ?? byCode;
   const isFog     = code === 45 || code === 48;
   const isWindy   = weather.windSpeed >= 8;     // even a gentle breeze shows a couple of wisps
   const cloud     = weather.cloudCover;
