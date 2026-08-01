@@ -260,3 +260,91 @@ export function dynamicSkyStyle(
   const to   = `hsl(${h} ${Math.max(18, s - 10)}% ${l2}%)`;
   return { background: `linear-gradient(160deg, ${from} 0%, ${to} 100%)` };
 }
+
+/* =====================================================================
+ * Sky-only palette — what the sky ACTUALLY looks like out of the window.
+ * No temperature input at all: only cloud cover, precipitation and the
+ * position of the sun. Used for the Hero so a 30° overcast day looks grey,
+ * not molten orange.
+ * ===================================================================*/
+export type SunPhase = "night" | "dawn" | "morning" | "day" | "golden" | "dusk";
+
+/** Work out where in the day we are from sunrise/sunset timestamps. */
+export function sunPhaseOf(nowMs: number, sunriseISO?: string, sunsetISO?: string, isDay = true): SunPhase {
+  if (!sunriseISO || !sunsetISO) return isDay ? "day" : "night";
+  const sr = new Date(sunriseISO).getTime();
+  const ss = new Date(sunsetISO).getTime();
+  const hour = 3600_000;
+  if (nowMs < sr - hour || nowMs > ss + hour) return "night";
+  if (nowMs < sr + hour) return "dawn";
+  if (nowMs > ss - hour) return "dusk";
+  if (nowMs > ss - 2.5 * hour) return "golden";
+  if (nowMs < sr + 3 * hour) return "morning";
+  return "day";
+}
+
+export interface SkyOnlyMods {
+  cloudCover?: number;
+  precipMm?: number;
+  precipProb?: number;
+  phase?: SunPhase;
+}
+
+/**
+ * Returns a two-stop vertical gradient of real sky colours.
+ * Top = upper sky, bottom = horizon.
+ */
+export function skyOnlyStyle(sky: WeatherInfo["sky"], mods: SkyOnlyMods = {}): React.CSSProperties {
+  const cc = Math.max(0, Math.min(100, mods.cloudCover ?? (sky === "clear" ? 5 : 80)));
+  const wet = sky === "rain" || sky === "snow" || (mods.precipMm ?? 0) > 0.05;
+  const phase: SunPhase = mods.phase ?? (sky === "night" ? "night" : "day");
+
+  // Base clear-sky colours per phase: [topH,topS,topL, botH,botS,botL]
+  const base: Record<SunPhase, number[]> = {
+    night:   [230, 55,  9, 224, 45, 16],
+    dawn:    [216, 45, 30,  22, 80, 58],
+    morning: [212, 62, 52, 205, 45, 74],
+    day:     [210, 72, 55, 202, 55, 80],
+    golden:  [212, 55, 46,  32, 78, 62],
+    dusk:    [228, 50, 20,  16, 78, 46],
+  };
+  let [th, ts, tl, bh, bs, bl] = base[phase];
+
+  // Cloud cover greys the sky out, pulling both stops toward slate.
+  const k = Math.max(0, Math.min(1, (cc - 15) / 75));
+  const towards = (v: number, target: number, amt: number) => v + (target - v) * amt;
+  const nightish = phase === "night" || phase === "dusk";
+  ts = towards(ts, 8, k * 0.9);
+  bs = towards(bs, 10, k * 0.85);
+  th = towards(th, 214, k * 0.8);
+  bh = towards(bh, 212, k * 0.7);
+  tl = towards(tl, nightish ? 12 : 42, k * 0.8);
+  bl = towards(bl, nightish ? 18 : 58, k * 0.75);
+
+  if (wet) {
+    // Rain: darker, flatter, slightly blue-grey.
+    ts = Math.min(ts, 16); bs = Math.min(bs, 18);
+    tl = Math.max(nightish ? 8 : 30, tl - 10);
+    bl = Math.max(nightish ? 12 : 42, bl - 8);
+  }
+  if (sky === "snow") {
+    ts = 10; bs = 12; th = 210; bh = 210;
+    tl = nightish ? 20 : 55; bl = nightish ? 28 : 74;
+  }
+
+  const top = `hsl(${Math.round(th)} ${Math.round(ts)}% ${Math.round(tl)}%)`;
+  const bottom = `hsl(${Math.round(bh)} ${Math.round(bs)}% ${Math.round(bl)}%)`;
+  return { background: `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)` };
+}
+
+/**
+ * Decide whether text on top of a gradient should be white ("light" ink) or
+ * black ("dark" ink). Parses the HSL lightness values out of the CSS string.
+ */
+export function gradientInk(style: React.CSSProperties | undefined): "light" | "dark" {
+  const css = String((style?.background ?? style?.backgroundImage ?? "") as string);
+  const ls = [...css.matchAll(/hsl\(\s*[\d.]+\s+[\d.]+%\s+([\d.]+)%/g)].map(m => Number(m[1]));
+  if (!ls.length) return "light";
+  const avg = ls.reduce((a, b) => a + b, 0) / ls.length;
+  return avg > 58 ? "dark" : "light";
+}
