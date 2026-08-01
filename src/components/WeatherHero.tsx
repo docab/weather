@@ -85,7 +85,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
         {/* Scroll cue — the hero fills the screen, so tell people there's more. */}
         <button
           type="button"
-          onClick={() => document.getElementById("howitfeels")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          onClick={() => document.getElementById("feels")?.scrollIntoView({ behavior: "smooth", block: "start" })}
           className="mx-auto mt-auto flex flex-col items-center gap-0.5 pt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground/75"
         >
           Scroll for the day
