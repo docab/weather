@@ -12,9 +12,9 @@ import { useConditionsForLocations } from "@/hooks/useConditions";
 import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations } from "@/lib/storage";
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus } from "lucide-react";
+import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus, RotateCw } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
-import { dynamicSkyStyle, describeWeather } from "@/lib/weatherCodes";
+import { dynamicSkyStyle, describeWeather, gradientInk } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 10;
@@ -97,11 +97,45 @@ const Index = () => {
     : { background: "hsl(var(--background))" };
 
   const NowIcon = skyInfo?.Icon ?? Eye;
+  // The page backdrop also carries cloud/rain layers that darken it, so the
+  // switch to dark ink only happens on genuinely bright daytime skies.
+  const ink = !activeWeather || !activeWeather.isDay
+    ? "light"
+    : gradientInk(pageBgStyle as React.CSSProperties, 74);
   const activeLocation = allLocations[activeIdx] ?? allLocations[0];
   const showLocationHeader = activeTab !== "briefing" && !!activeLocation;
 
+  // Manual refresh — re-locates and refetches the active location, throttled
+  // to once every 60s so a hammered button doesn't spam the upstream API.
+  const [refreshedAt, setRefreshedAt] = useState<number>(() => Date.now());
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      geo.request?.();
+      await queryClient.invalidateQueries({ queryKey: ["conditions"] });
+      setRefreshedAt(Date.now());
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Auto-refresh when the app comes back to the foreground, but only if the
+  // data is older than five minutes.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - refreshedAt < 5 * 60_000) return;
+      queryClient.invalidateQueries({ queryKey: ["conditions"] });
+      setRefreshedAt(Date.now());
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refreshedAt, queryClient]);
+
   return (
-    <div className="relative min-h-[100dvh] pb-32">
+    <div className={`relative min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}>
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
           The Stars tab swaps in aurora + meteor showers. */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={pageBgStyle as React.CSSProperties}>
@@ -115,7 +149,7 @@ const Index = () => {
 
       {showLocationHeader && (
         <div className="sticky top-0 z-30 -mx-4 mb-1 px-4 pt-[calc(env(safe-area-inset-top)+0.15rem)] pb-1.5 backdrop-blur-xl bg-background/20">
-          <div className="mx-auto flex max-w-2xl items-center justify-center">
+          <div className="mx-auto flex max-w-2xl items-center justify-center gap-2">
             <button
               onClick={() => setActiveTab("briefing")}
               className="flex items-center gap-2 rounded-full glass-pill px-5 py-2.5 text-base font-semibold shadow-card"
@@ -126,6 +160,13 @@ const Index = () => {
                 {activeLocation.customName || activeLocation.name}
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={handleRefresh}
+              aria-label="Refresh weather"
+              className="flex h-10 w-10 items-center justify-center rounded-full glass-pill shadow-card active:scale-95"
+            >
+              <RotateCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
           </div>
         </div>
@@ -205,9 +246,15 @@ const Index = () => {
           </div>
         )}
 
-        <p className="mt-8 text-center text-[10px] text-muted-foreground">
-          Data: Open-Meteo · postcodes.io · BigDataCloud · European AQI
-        </p>
+        <div className="mt-8 space-y-1 text-center text-[10px] text-muted-foreground">
+          {activeQuery?.data && (
+            <p>
+              Station reading {fmtClock(activeQuery.data.weather.observedAt ?? activeQuery.data.fetchedAt, activeQuery.data.weather.timezone)}
+              {" · "}app refreshed {relTime(refreshedAt)}
+            </p>
+          )}
+          <p>Data: Open-Meteo · postcodes.io · BigDataCloud · European AQI</p>
+        </div>
       </main>
 
       {/* Bottom navigation — iOS 26-style floating liquid-glass pill.
@@ -261,6 +308,23 @@ function TabBtn({ active, onClick, label, children }: {
       <span className="text-[11px] font-semibold">{label}</span>
     </button>
   );
+}
+
+/** Clock reading in the location's own timezone. */
+function fmtClock(ms: number, tz: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz,
+  }).format(new Date(ms));
+}
+
+/** "just now" / "6 min ago" style relative label. */
+function relTime(ms: number): string {
+  const mins = Math.round((Date.now() - ms) / 60000);
+  if (mins < 1) return "just now";
+  if (mins === 1) return "1 min ago";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  return h === 1 ? "1 hour ago" : `${h} hours ago`;
 }
 
 export default Index;

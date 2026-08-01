@@ -96,6 +96,8 @@ export interface WeatherData {
   pressure?: number;   // hPa
   dewPoint?: number;   // °C
   precipMm?: number;   // current mm/h
+  /** Epoch ms of the observation the provider reported (not our fetch time). */
+  observedAt?: number;
   hourly: WeatherHour[];
   daily: WeatherDay[];
   alerts: WeatherAlert[];

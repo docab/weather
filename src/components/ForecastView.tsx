@@ -116,13 +116,12 @@ function DayExpansion({ day, conditions }: { day: string; conditions: LocationCo
           return (
             <div
               key={i}
-              className="rounded-lg p-1.5 text-center"
-              style={{ backgroundImage: dayGradient(meanT, info.sky) }}
+              className="glass-tile p-1.5 text-center"
             >
-              <div className="text-[10px] font-semibold text-foreground/85">{label}</div>
-              <HourIcon className="mx-auto my-0.5 h-3.5 w-3.5 text-foreground/80" strokeWidth={1.6} />
+              <div className="text-[10px] font-semibold text-foreground">{label}</div>
+              <HourIcon className="mx-auto my-0.5 h-3.5 w-3.5 text-foreground" strokeWidth={1.6} />
               <div className="text-[11px] font-bold tabular">{meanT}°</div>
-              <div className="text-[9px] text-foreground/70">{Math.round(peakP)}%</div>
+              <div className="text-[9px] text-muted-foreground">{Math.round(peakP)}%</div>
             </div>
           );
         })}

@@ -32,13 +32,21 @@ export function WeatherFX({ weather, intensity = 1 }: { weather: WeatherData; in
   const isRain    = codeIsRain || (!isSnow && weather.precipProb >= 70);
   // Match the visual intensity to the actual weather code rather than
   // forcing every wet condition to look like a heavy shower.
-  const rainCategory: "drizzle" | "light" | "moderate" | "heavy" =
+  // Live rainfall rate wins over the code: 6 mm/h is a downpour whatever the
+  // WMO code says, and 0.2 mm/h is a drizzle even under a "heavy rain" code.
+  const mmNow = weather.precipMm ?? 0;
+  const byCode: "drizzle" | "light" | "moderate" | "heavy" =
     isThunder || code === 65 || code === 67 || code === 82 ? "heavy" :
     code === 63 || code === 81 ? "moderate" :
     code === 55 || code === 61 || code === 66 || code === 80 ? "light" :
     code === 51 || code === 53 ? "drizzle" :
-    // precip-probability fallback when code doesn't say rain
     weather.precipProb >= 90 ? "light" : "drizzle";
+  const byRate: "drizzle" | "light" | "moderate" | "heavy" | null =
+    mmNow >= 7.5 ? "heavy" :
+    mmNow >= 2.5 ? "moderate" :
+    mmNow >= 0.5 ? "light" :
+    mmNow > 0.05 ? "drizzle" : null;
+  const rainCategory = byRate ?? byCode;
   const isFog     = code === 45 || code === 48;
   const isWindy   = weather.windSpeed >= 8;     // even a gentle breeze shows a couple of wisps
   const cloud     = weather.cloudCover;
@@ -979,12 +987,14 @@ export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { 
   // for a gibbous (lit > 50%) the white bulge extends into the dark half.
   return (
     <div style={{ position: "relative", width: size, height: size } as CSSProperties}>
-      {/* halo */}
+      {/* Halo — scales with illumination, so a new moon has almost no glow
+          and a full moon washes the sky around it. */}
       <div style={{
-        position: "absolute", inset: -size * 0.22, borderRadius: "50%",
-        background: `radial-gradient(circle, hsl(45 60% 92% / ${0.18 + illumination * 0.35}), hsl(220 60% 80% / .12) 55%, transparent 75%)`,
+        position: "absolute", inset: -size * (0.10 + illumination * 0.32), borderRadius: "50%",
+        background: `radial-gradient(circle, hsl(45 60% 94% / ${0.04 + illumination * illumination * 0.55}), hsl(220 60% 82% / ${0.03 + illumination * 0.14}) 55%, transparent 76%)`,
         animation: "fx-sun-pulse 6s ease-in-out infinite",
-        filter: "blur(2px)",
+        filter: `blur(${1 + illumination * 4}px)`,
+        opacity: 0.25 + illumination * 0.75,
       } as CSSProperties}/>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ position:"absolute", inset:0 }}>
         <defs>

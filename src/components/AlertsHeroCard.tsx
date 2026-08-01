@@ -60,7 +60,7 @@ export function AlertsHeroCard({ conditions }: { conditions: LocationConditions 
 
         {/* Big-change alerts across the next 24h */}
         {alerts.length > 0 && (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-2 space-y-2">
             {alerts.map((a, i) => (
               <li key={i} className="flex items-start gap-3 rounded-2xl bg-background/45 p-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -167,7 +167,25 @@ function buildBigChangeAlerts(c: LocationConditions): AlertRow[] {
 function fmtRange(startISO: string, endISO: string, tz: string): string {
   const s = fmtHour(startISO, tz);
   const e = fmtHour(endISO, tz);
-  return `${s}–${e}`.toUpperCase();
+  const day = dayTag(startISO, tz);
+  return `${s}–${e}`.toUpperCase() + (day ? ` · ${day}` : "");
+}
+
+/**
+ * Tag a window with the day it lands on so a 2am alert doesn't read as if
+ * it's happening this afternoon. Blank for windows later today.
+ */
+function dayTag(iso: string, tz: string): string {
+  const key = (d: Date) => new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz }).format(d);
+  const target = new Date(iso);
+  const now = new Date();
+  if (key(target) === key(now)) {
+    const hr = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: tz }).format(target));
+    return hr >= 19 ? "Tonight" : "";
+  }
+  const tomorrow = new Date(now.getTime() + 86_400_000);
+  if (key(target) === key(tomorrow)) return "Tomorrow";
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: tz }).format(target);
 }
 function fmtHour(iso: string, tz: string): string {
   const d = new Date(iso);

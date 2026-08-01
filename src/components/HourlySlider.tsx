@@ -46,6 +46,9 @@ export function HourlySlider({ conditions }: { conditions: LocationConditions })
           </div>
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Tap for details</div>
         </header>
+        <p className="-mt-2 mb-3 text-[11px] leading-relaxed text-muted-foreground">
+          Hour by hour from now: the temperature you'll actually feel, the sky, and the chance of rain. Swipe across, tap any hour to unpack it.
+        </p>
         <div
           ref={scrollRef}
           data-noswipe
@@ -56,7 +59,6 @@ export function HourlySlider({ conditions }: { conditions: LocationConditions })
           {hours.map((h, i) => {
             const info = describeWeather(h.weatherCode, isDayHour(h.time, tz));
             const Icon = info.Icon;
-            const grad = dayGradient(h.feelsLike, info.sky);
             const localHour = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: tz }).format(new Date(h.time));
             const key = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz }).format(new Date(h.time));
             const showDivider = i === 0 || (i > 0 && key !== new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz }).format(new Date(hours[i-1].time)));
@@ -71,14 +73,12 @@ export function HourlySlider({ conditions }: { conditions: LocationConditions })
                 )}
                 <button
                   onClick={() => setSelected(h)}
-                  className="relative flex w-16 flex-col items-center overflow-hidden rounded-2xl border border-border/40 p-2 text-center transition hover:scale-[1.04] hover:shadow-lg animate-fade-in"
-                  style={{ backgroundImage: grad }}
+                  className="glass-tile relative flex w-16 flex-col items-center overflow-hidden p-2 text-center transition hover:scale-[1.04] hover:shadow-lg animate-fade-in"
                 >
-                  <div className="pointer-events-none absolute inset-0 bg-background/25" />
-                  <div className="relative text-[10px] font-bold uppercase tracking-wider text-foreground/90">{i === 0 ? "Now" : `${localHour}:00`}</div>
-                  <Icon className="relative my-1 h-6 w-6 text-foreground/95 drop-shadow" strokeWidth={1.7} />
+                  <div className="relative text-[10px] font-bold uppercase tracking-wider text-foreground">{i === 0 ? "Now" : `${localHour}:00`}</div>
+                  <Icon className="relative my-1 h-6 w-6 text-foreground drop-shadow" strokeWidth={1.7} />
                   <div className="relative text-sm font-bold tabular text-foreground">{Math.round(h.feelsLike)}°</div>
-                  <div className="relative mt-0.5 flex items-center gap-0.5 text-[9px] font-semibold text-foreground/80">
+                  <div className="relative mt-0.5 flex items-center gap-0.5 text-[9px] font-semibold text-muted-foreground">
                     <CloudRain className="h-2.5 w-2.5" />{Math.round(h.precipProb)}%
                   </div>
                 </button>
