@@ -97,7 +97,11 @@ const Index = () => {
     : { background: "hsl(var(--background))" };
 
   const NowIcon = skyInfo?.Icon ?? Eye;
-  const ink = gradientInk(pageBgStyle as React.CSSProperties);
+  // The page backdrop also carries cloud/rain layers that darken it, so the
+  // switch to dark ink only happens on genuinely bright daytime skies.
+  const ink = !activeWeather || !activeWeather.isDay
+    ? "light"
+    : gradientInk(pageBgStyle as React.CSSProperties, 74);
   const activeLocation = allLocations[activeIdx] ?? allLocations[0];
   const showLocationHeader = activeTab !== "briefing" && !!activeLocation;
 

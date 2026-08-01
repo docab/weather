@@ -341,10 +341,10 @@ export function skyOnlyStyle(sky: WeatherInfo["sky"], mods: SkyOnlyMods = {}): R
  * Decide whether text on top of a gradient should be white ("light" ink) or
  * black ("dark" ink). Parses the HSL lightness values out of the CSS string.
  */
-export function gradientInk(style: React.CSSProperties | undefined): "light" | "dark" {
+export function gradientInk(style: React.CSSProperties | undefined, threshold = 62): "light" | "dark" {
   const css = String((style?.background ?? style?.backgroundImage ?? "") as string);
   const ls = [...css.matchAll(/hsl\(\s*[\d.]+\s+[\d.]+%\s+([\d.]+)%/g)].map(m => Number(m[1]));
   if (!ls.length) return "light";
   const avg = ls.reduce((a, b) => a + b, 0) / ls.length;
-  return avg > 58 ? "dark" : "light";
+  return avg > threshold ? "dark" : "light";
 }
