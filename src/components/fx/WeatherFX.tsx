@@ -979,12 +979,14 @@ export function AnimatedMoon({ size = 64, illumination = 0.5, phase = 0.25 }: { 
   // for a gibbous (lit > 50%) the white bulge extends into the dark half.
   return (
     <div style={{ position: "relative", width: size, height: size } as CSSProperties}>
-      {/* halo */}
+      {/* Halo — scales with illumination, so a new moon has almost no glow
+          and a full moon washes the sky around it. */}
       <div style={{
-        position: "absolute", inset: -size * 0.22, borderRadius: "50%",
-        background: `radial-gradient(circle, hsl(45 60% 92% / ${0.18 + illumination * 0.35}), hsl(220 60% 80% / .12) 55%, transparent 75%)`,
+        position: "absolute", inset: -size * (0.10 + illumination * 0.32), borderRadius: "50%",
+        background: `radial-gradient(circle, hsl(45 60% 94% / ${0.04 + illumination * illumination * 0.55}), hsl(220 60% 82% / ${0.03 + illumination * 0.14}) 55%, transparent 76%)`,
         animation: "fx-sun-pulse 6s ease-in-out infinite",
-        filter: "blur(2px)",
+        filter: `blur(${1 + illumination * 4}px)`,
+        opacity: 0.25 + illumination * 0.75,
       } as CSSProperties}/>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ position:"absolute", inset:0 }}>
         <defs>
