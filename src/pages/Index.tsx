@@ -306,4 +306,39 @@ function TabBtn({ active, onClick, label, children }: {
   );
 }
 
+/** Clock reading in the location's own timezone. */
+function fmtClock(ms: number, tz: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz,
+  }).format(new Date(ms));
+}
+
+/** "just now" / "6 min ago" style relative label. */
+function relTime(ms: number): string {
+  const mins = Math.round((Date.now() - ms) / 60000);
+  if (mins < 1) return "just now";
+  if (mins === 1) return "1 min ago";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  return h === 1 ? "1 hour ago" : `${h} hours ago`;
+}
+
+function TabBtnUnused({ active, onClick, label, children }: {
+  active: boolean; onClick: () => void; label: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl py-2 transition active:scale-95 ${active
+        ? "bg-primary/20 text-primary shadow-inner"
+        : "text-muted-foreground hover:text-foreground"}`}
+    >
+      {children}
+      <span className="text-[11px] font-semibold">{label}</span>
+    </button>
+  );
+}
+
 export default Index;
