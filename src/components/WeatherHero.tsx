@@ -59,11 +59,11 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
             <div className="mt-1.5 text-xl font-semibold leading-snug text-foreground/95">{info.label}</div>
             <div className="mt-4 tabular">
               <span className="block text-sm font-semibold uppercase tracking-[0.18em] text-foreground/85">
-                Feels like {Math.round(weather.feelsLike)}°
+                Feels like
               </span>
-              <span className="block text-7xl font-bold leading-none">{Math.round(weather.temp)}°</span>
+              <span className="block text-7xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
               <span className="mt-1 block text-sm text-foreground/80">
-                Actual air temperature
+                Actual air temp <span className="font-semibold tabular">{Math.round(weather.temp)}°</span>
               </span>
             </div>
           </div>
