@@ -6,8 +6,10 @@
 
 @layer base {
   :root {
-    /* Base — deep navy/charcoal */
-    --background: 220 26% 7%;          /* #0D1117 */
+    /* Base — the app background is a live thermal tint set at runtime from
+       the active location's feels-like temperature. No hardcoded navy. */
+    --thermal-bg: 220 22% 10%;
+    --background: var(--thermal-bg);
     --foreground: 210 40% 98%;
 
     --card: 220 22% 10%;               /* slightly lifted */
@@ -63,7 +65,7 @@
 
   /* The app is dark by default — keep .dark identical so any shadcn dark utilities still work */
   .dark {
-    --background: 220 26% 7%;
+    --background: var(--thermal-bg);
     --foreground: 210 40% 98%;
     --card: 220 22% 10%;
     --card-foreground: 210 40% 98%;
@@ -200,6 +202,29 @@
     background-color: hsl(0 0% 100% / 0.34);
     border-color: hsl(220 40% 6% / 0.12);
   }
+
+  /* "What it is" explainer lines — always italic + muted, sat directly
+     beneath a card's header title. */
+  .what-it-is {
+    font-style: italic;
+    opacity: 0.72;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    color: hsl(var(--muted-foreground));
+    margin-top: 0.125rem;
+  }
+
+  /* "Right now" section header — a touch larger and bolder than the
+     small-caps card labels. */
+  .right-now-head {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: hsl(var(--foreground));
+  }
+
+  /* Every panel gets a frosty backdrop. */
+  .frosty { backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); }
 }
 
 /* =====================================================================

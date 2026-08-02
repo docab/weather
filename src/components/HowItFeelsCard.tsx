@@ -22,9 +22,9 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
         id="feels"
         className="glass-card group relative w-full overflow-hidden p-5 text-left shadow-card transition hover:scale-[1.005] animate-fade-in-up"
       >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary" /> How it feels
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="right-now-head flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Right now
           </div>
           <LocalTimeCard
             timezone={w.timezone}
@@ -32,6 +32,7 @@ export function HowItFeelsCard({ conditions }: { conditions: LocationConditions 
             variant="inline"
           />
         </div>
+        <p className="what-it-is mb-3">How the air actually feels on your skin right now, and how the rest of the day shapes up.</p>
         <p className="text-lg leading-relaxed text-foreground/95">{conditions.narrative}</p>
         <p className="mt-3 text-sm text-foreground/85">
           <span className="font-semibold text-foreground">Indoors (no AC):</span> {indoorEstimate(w.temp, w.hourly)}

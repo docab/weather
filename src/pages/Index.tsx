@@ -14,7 +14,7 @@ import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus, RotateCw } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
-import { dynamicSkyStyle, describeWeather, gradientInk } from "@/lib/weatherCodes";
+import { dynamicSkyStyle, describeWeather, gradientInk, thermalTint } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 10;
@@ -134,8 +134,15 @@ const Index = () => {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refreshedAt, queryClient]);
 
+  // Ambient thermal tint for the whole app shell (cards inherit it through
+  // --background). The live sky lives inside the hero only.
+  const thermal = activeWeather ? thermalTint(activeWeather.feelsLike) : "220 22% 10%";
+
   return (
-    <div className={`relative min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}>
+    <div
+      className={`relative min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      style={{ "--thermal-bg": thermal } as React.CSSProperties}
+    >
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
           The Stars tab swaps in aurora + meteor showers. */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={pageBgStyle as React.CSSProperties}>
@@ -246,13 +253,21 @@ const Index = () => {
           </div>
         )}
 
-        <div className="mt-8 space-y-1 text-center text-[10px] text-muted-foreground">
+        <div className="mt-8 flex flex-col items-center gap-2 text-center text-[10px] text-muted-foreground">
           {activeQuery?.data && (
             <p>
-              Station reading {fmtClock(activeQuery.data.weather.observedAt ?? activeQuery.data.fetchedAt, activeQuery.data.weather.timezone)}
-              {" · "}app refreshed {relTime(refreshedAt)}
+              Last checked {relTime(refreshedAt)}
+              {" · "}weather station updated {relTime(activeQuery.data.weather.observedAt ?? activeQuery.data.fetchedAt)}
+              {" ("}{fmtClock(activeQuery.data.weather.observedAt ?? activeQuery.data.fetchedAt, activeQuery.data.weather.timezone)} local{")"}
             </p>
           )}
+          <button
+            onClick={handleRefresh}
+            className="glass-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-foreground active:scale-95"
+          >
+            <RotateCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh now"}
+          </button>
           <p>Data: Open-Meteo · postcodes.io · BigDataCloud · European AQI</p>
         </div>
       </main>

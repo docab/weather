@@ -99,17 +99,16 @@ export function SkyEventsCard({ conditions }: { conditions: LocationConditions }
         </div>
         <ul className="space-y-2">
           {upcoming.map(e => (
-            <li key={e.id} className="flex items-start justify-between gap-3 rounded-xl bg-secondary/40 p-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />{e.title}
-                </div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">{e.blurb}</div>
+            <li key={e.id} className="rounded-xl bg-secondary/40 p-3 text-left">
+              <div className="flex items-baseline gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span className="min-w-0 flex-1 text-sm font-semibold leading-snug">{e.title}</span>
+                <span className="shrink-0 text-[11px] font-semibold text-foreground/90">{e.when}</span>
               </div>
-              <div className="shrink-0 text-right text-[11px]">
-                <div className="font-semibold text-foreground/90">{e.when}</div>
-                {e.visibility && <div className="text-muted-foreground">{e.visibility}</div>}
-              </div>
+              <p className="mt-1 pl-3.5 text-[11px] leading-relaxed text-muted-foreground">{e.blurb}</p>
+              {e.visibility && (
+                <p className="mt-0.5 pl-3.5 text-[11px] leading-relaxed text-muted-foreground/80">{e.visibility}</p>
+              )}
             </li>
           ))}
         </ul>

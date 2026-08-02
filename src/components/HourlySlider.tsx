@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import type { WeatherHour } from "@/lib/types";
 import type { LocationConditions } from "@/lib/types";
 import { describeWeather } from "@/lib/weatherCodes";
-import { dayGradient } from "@/lib/dayGradient";
 import { CloudRain, Droplets, Wind, Thermometer, Clock } from "lucide-react";
 import { DetailModal, ExplainerBlock } from "./ui/detail-modal";
 import { explainPrecipProb, explainWind, explainHumidity, explainTemp } from "@/lib/explainers";
@@ -46,7 +45,7 @@ export function HourlySlider({ conditions }: { conditions: LocationConditions })
           </div>
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Tap for details</div>
         </header>
-        <p className="-mt-2 mb-3 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="what-it-is -mt-2 mb-3">
           Hour by hour from now: the temperature you'll actually feel, the sky, and the chance of rain. Swipe across, tap any hour to unpack it.
         </p>
         <div
@@ -92,7 +91,6 @@ export function HourlySlider({ conditions }: { conditions: LocationConditions })
         open={!!selected}
         onClose={() => setSelected(null)}
         title={selected ? hourTitle(selected, tz) : ""}
-        tone={selected ? { backgroundImage: dayGradient(selected.feelsLike, describeWeather(selected.weatherCode, isDayHour(selected.time, tz)).sky) } : undefined}
       >
         {selected && (
           <div className="space-y-3">
