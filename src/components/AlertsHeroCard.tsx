@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LocationConditions, WeatherHour } from "@/lib/types";
-import { Bell, Zap, CloudRain, Wind, Sun, Thermometer, Umbrella, Droplets, Cloud, Moon } from "lucide-react";
-import { describeWeather } from "@/lib/weatherCodes";
-import { dayGradient } from "@/lib/dayGradient";
+import { Zap, CloudRain, Wind, Sun, Thermometer, Umbrella, Droplets, Cloud, Moon } from "lucide-react";
 
 /**
  * Top-of-Now hybrid: **Next 2 Hours** (immediate window) + **Smart Alerts**

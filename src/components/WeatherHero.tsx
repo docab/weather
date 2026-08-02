@@ -1,5 +1,5 @@
 import type { LocationConditions } from "@/lib/types";
-import { describeWeather, skyOnlyStyle, sunPhaseOf, gradientInk } from "@/lib/weatherCodes";
+import { describeWeather, skyOnlyStyle, sunPhaseOf, gradientInk, thermalTint } from "@/lib/weatherCodes";
 import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp, ChevronsDown } from "lucide-react";
 import { WeatherFX, AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
 import { getMoonPhase } from "@/lib/astronomy";
@@ -23,9 +23,12 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const ink = gradientInk(skyStyle);
   return (
     <div
-      className={`glass-card relative flex min-h-[86vh] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
-      style={skyStyle}
+      className={`glass-card relative flex h-[calc(100dvh-13.5rem)] min-h-[26rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      /* Card BASE carries the ambient thermal tint; the live sky is painted
+         inside as its own layer so temperature never colours the sky. */
+      style={{ backgroundColor: `hsl(${thermalTint(weather.feelsLike)})` }}
     >
+      <div className="pointer-events-none absolute inset-0" style={skyStyle} />
       <WeatherFX weather={weather} />
       {/* Frosted branch: sways with wind speed, always drawn behind text. */}
       <WindBranchFX mph={weather.windSpeed} latitude={conditions.location.latitude} />
@@ -45,19 +48,22 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
       <div className={`relative flex flex-1 flex-col ${ink === "light" ? "[text-shadow:0_1px_3px_rgb(0_0_0_/_0.45)]" : "[text-shadow:0_1px_2px_rgb(255_255_255_/_0.35)]"}`}>
-        <div className="flex items-start justify-between gap-3 pt-2">
+        <div className="flex items-start justify-between gap-3 pt-1">
           <div>
             <div className="text-4xl font-bold leading-tight tracking-tight">
               {oneWord(weather, info.sky)}
             </div>
-            <div className="mt-1 text-sm font-medium text-foreground/85">{info.label}</div>
-            <div className="mt-5 tabular">
-              <span className="block text-[11px] uppercase tracking-[0.2em] text-foreground/80">
-                Feels like
+            <div className="mt-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-foreground/75">
+              {envWord(weather)}
+            </div>
+            <div className="mt-1.5 text-xl font-semibold leading-snug text-foreground/95">{info.label}</div>
+            <div className="mt-4 tabular">
+              <span className="block text-sm font-semibold uppercase tracking-[0.18em] text-foreground/85">
+                Feels like {Math.round(weather.feelsLike)}°
               </span>
-              <span className="block text-8xl font-bold leading-none">{Math.round(weather.feelsLike)}°</span>
+              <span className="block text-7xl font-bold leading-none">{Math.round(weather.temp)}°</span>
               <span className="mt-1 block text-sm text-foreground/80">
-                Actual <span className="font-semibold tabular">{Math.round(weather.temp)}°</span>
+                Actual air temperature
               </span>
             </div>
           </div>
@@ -70,7 +76,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
           </div>
         </div>
 
-        <div className="mt-8 flex items-center gap-3 text-sm">
+        <div className="mt-5 flex items-center gap-3 text-sm">
           <span className="inline-flex items-center gap-1 tabular">
             <ArrowUp className="h-3.5 w-3.5" /> {Math.round(weather.high)}°
           </span>
@@ -82,7 +88,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
           </span>
         </div>
 
-        <div className="mt-6 grid grid-cols-4 gap-3">
+        <div className="mt-4 grid grid-cols-4 gap-3">
           <Stat icon={<CloudRain className="h-4 w-4" />} label="Rain" value={`${Math.round(weather.precipProb)}%`} anchor="rain" />
           <Stat icon={<Wind className="h-4 w-4" />} label="Wind" value={`${Math.round(weather.windSpeed)} mph`} anchor="more" />
           <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} anchor="more" />
@@ -101,6 +107,23 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       </div>
     </div>
   );
+}
+
+/**
+ * A one-word environmental descriptor driven by the metric that's most out of
+ * the ordinary right now — humidity, wind, UV or cold.
+ */
+function envWord(w: LocationConditions["weather"]): string {
+  if (w.humidity >= 88 && w.feelsLike >= 18) return "Sticky";
+  if (w.humidity >= 80 && w.feelsLike >= 16) return "Muggy";
+  if (w.windSpeed >= 35) return "Gale-blown";
+  if (w.windSpeed >= 25) return "Breezy";
+  if (w.uvIndex >= 8) return "Harsh";
+  if (w.uvIndex >= 6) return "Bright";
+  if (w.humidity <= 30) return "Dry";
+  if (w.feelsLike <= 4) return "Biting";
+  if ((w.precipMm ?? 0) > 0.05) return "Wet";
+  return "Settled";
 }
 
 /**
