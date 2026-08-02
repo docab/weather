@@ -24,61 +24,35 @@ export function AlertsHeroCard({ conditions }: { conditions: LocationConditions 
   const alerts = useMemo(() => buildBigChangeAlerts(conditions), [conditions]);
 
   if (!now) return null;
-  const info = describeWeather(now.weatherCode, w.isDay);
-  const grad = dayGradient(now.feelsLike, info.sky);
-  const nowLabel = fmtRange(now.time, w.hourly[2]?.time ?? now.time, tz);
+  const advice = buildAdvice(conditions, alerts[0]);
 
+  // Ultra-slim frosty pill: two tight lines, no card chrome.
   return (
     <section
-      className="relative overflow-hidden rounded-3xl border border-border/40 shadow-card animate-fade-in-up"
-      style={{ backgroundImage: grad }}
+      className="glass-pill flex items-center gap-2.5 overflow-hidden rounded-full px-3 py-1.5 shadow-card animate-fade-in"
+      aria-label="Smart alerts"
     >
-      <div className="pointer-events-none absolute inset-0 bg-background/55 backdrop-blur-[1px]" />
-      <div className="relative p-5">
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          <Bell className="h-3.5 w-3.5 text-primary" /> Smart alerts
-          <span className="ml-auto text-[10px] opacity-70">{conditions.location.customName || conditions.location.name}</span>
-        </div>
-
-        {/* NEXT 2 HOURS — pinned first */}
-        <div className="flex items-start gap-3 rounded-2xl bg-background/50 p-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Zap className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-primary">
-              Next 2 hours · {nowLabel}
-            </div>
-            <p className="mt-0.5 text-sm leading-relaxed text-foreground/95">{nextLine}</p>
-            <div className="mt-1.5 flex items-center gap-3 text-[11px] text-foreground/80">
-              <span className="inline-flex items-center gap-1"><CloudRain className="h-3 w-3" />{Math.round(Math.max(now.precipProb, soon[0]?.precipProb ?? 0, soon[1]?.precipProb ?? 0))}%</span>
-              <span className="inline-flex items-center gap-1"><Wind className="h-3 w-3" />{Math.round(w.windSpeed)} mph</span>
-              <span className="inline-flex items-center gap-1"><Thermometer className="h-3 w-3" />{Math.round(now.feelsLike)}° feels</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Big-change alerts across the next 24h */}
-        {alerts.length > 0 && (
-          <ul className="mt-2 space-y-2">
-            {alerts.map((a, i) => (
-              <li key={i} className="flex items-start gap-3 rounded-2xl bg-background/45 p-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                  {a.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {a.window}
-                  </div>
-                  <p className="mt-0.5 text-sm leading-snug text-foreground/95">{a.text}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+      <Zap className="h-3.5 w-3.5 shrink-0 text-primary" />
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="truncate text-[11px] font-semibold text-foreground/95">{nextLine}</p>
+        <p className="truncate text-[10px] text-muted-foreground">{advice}</p>
       </div>
+      <span className="shrink-0 text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">2h</span>
     </section>
   );
+}
+
+/** One short line of what to actually do about the next two hours. */
+function buildAdvice(c: LocationConditions, next?: AlertRow): string {
+  const w = c.weather;
+  const soon = w.hourly.slice(0, 3);
+  const peak = Math.max(...soon.map(h => h.precipProb), 0);
+  if (next) return `${next.window} · ${next.text.split(".")[0]}.`;
+  if (peak >= 60) return "Take a brolly — rain is likely within the next 2 hours.";
+  if (peak >= 30) return "Maybe pocket a brolly; showers are possible.";
+  if (w.windSpeed >= 25) return "Blustery out — a hood beats a hat right now.";
+  if (w.uvIndex >= 6) return "Strong sun — SPF if you're out for more than 20 minutes.";
+  return "No umbrella needed for the next 2 hours.";
 }
 
 interface AlertRow { window: string; text: string; icon: React.ReactNode }
