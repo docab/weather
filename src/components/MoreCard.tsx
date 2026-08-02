@@ -28,7 +28,7 @@ export function MoreCard({ conditions }: { conditions: LocationConditions }) {
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5" />
         </div>
-        <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="what-it-is mb-3">
           The numbers behind the forecast — pressure, dew point, visibility and the rest — and what each one actually does to your day.
         </p>
         <div className="grid grid-cols-3 gap-2 text-xs">

@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import type { WeatherHour } from "@/lib/types";
 import type { LocationConditions } from "@/lib/types";
 import { describeWeather } from "@/lib/weatherCodes";
-import { dayGradient } from "@/lib/dayGradient";
 import { CloudRain, Droplets, Wind, Thermometer, Clock } from "lucide-react";
 import { DetailModal, ExplainerBlock } from "./ui/detail-modal";
 import { explainPrecipProb, explainWind, explainHumidity, explainTemp } from "@/lib/explainers";

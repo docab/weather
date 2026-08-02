@@ -47,7 +47,7 @@ export function RainCard({ conditions }: { conditions: LocationConditions }) {
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5" />
           </div>
-          <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="what-it-is mb-2">
             Whether you'll get wet: how likely rain is, how hard it's falling, and how much of the area it covers.
           </p>
           <div className="flex items-baseline gap-3">
