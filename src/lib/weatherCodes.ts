@@ -332,9 +332,33 @@ export function skyOnlyStyle(sky: WeatherInfo["sky"], mods: SkyOnlyMods = {}): R
     tl = nightish ? 20 : 55; bl = nightish ? 28 : 74;
   }
 
+  // Mid stop keeps the horizon transition believable rather than a flat wash.
+  const mh = Math.round((th + bh) / 2);
+  const ms = Math.round((ts + bs) / 2);
+  const ml = Math.round((tl + bl) / 2);
   const top = `hsl(${Math.round(th)} ${Math.round(ts)}% ${Math.round(tl)}%)`;
+  const mid = `hsl(${mh} ${ms}% ${ml}%)`;
   const bottom = `hsl(${Math.round(bh)} ${Math.round(bs)}% ${Math.round(bl)}%)`;
-  return { background: `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)` };
+  return { background: `linear-gradient(180deg, ${top} 0%, ${mid} 58%, ${bottom} 100%)` };
+}
+
+/**
+ * Ambient thermal tint for the APP + card bases (never for the live sky
+ * inside the hero). Cold → deep blue-slate, mild → neutral navy, hot →
+ * dusky ember. Returned as a bare `h s% l%` triple for CSS variables.
+ */
+export function thermalTint(feelsLike: number): string {
+  const t = Math.max(-15, Math.min(45, feelsLike));
+  let h: number, s: number, l: number;
+  if (t < 0)       { h = 214; s = 42; l = 11; }
+  else if (t < 8)  { h = 210; s = 34; l = 11; }
+  else if (t < 15) { h = 214; s = 26; l = 10; }
+  else if (t < 20) { h = 220; s = 20; l = 10; }
+  else if (t < 25) { h = 32;  s = 16; l = 10; }
+  else if (t < 30) { h = 26;  s = 26; l = 11; }
+  else if (t < 36) { h = 18;  s = 34; l = 11; }
+  else             { h = 10;  s = 42; l = 12; }
+  return `${h} ${s}% ${l}%`;
 }
 
 /**
