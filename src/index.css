@@ -6,8 +6,10 @@
 
 @layer base {
   :root {
-    /* Base — deep navy/charcoal */
-    --background: 220 26% 7%;          /* #0D1117 */
+    /* Base — the app background is a live thermal tint set at runtime from
+       the active location's feels-like temperature. No hardcoded navy. */
+    --thermal-bg: 220 22% 10%;
+    --background: var(--thermal-bg);
     --foreground: 210 40% 98%;
 
     --card: 220 22% 10%;               /* slightly lifted */
@@ -63,7 +65,7 @@
 
   /* The app is dark by default — keep .dark identical so any shadcn dark utilities still work */
   .dark {
-    --background: 220 26% 7%;
+    --background: var(--thermal-bg);
     --foreground: 210 40% 98%;
     --card: 220 22% 10%;
     --card-foreground: 210 40% 98%;
