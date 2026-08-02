@@ -28,13 +28,21 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
     if (t >= s) return 1;
     return (t - r) / (s - r);
   })();
-  // Semi-circle arc spanning the card width. The viewBox is padded top and
-  // bottom so the apex sun and the time labels are never clipped.
-  const arcCx = 200, arcCy = 132, arcR = 176;
+  // Elliptical arc so the apex sits well inside the viewBox — a semicircle
+  // as wide as the card would put the top of the curve above y=0 (clipped).
+  const arcCx = 200, arcCy = 168, arcRx = 176, arcRy = 116;
   const angle = Math.PI * (1 - progress); // π at rise, 0 at set
-  const sunX = arcCx + arcR * Math.cos(angle);
-  const sunY = arcCy - arcR * Math.sin(angle);
+  const sunX = arcCx + arcRx * Math.cos(angle);
+  const sunY = arcCy - arcRy * Math.sin(angle);
   const belowHorizon = !pos.visible;
+  // Sky colour under the arc follows the sun's height, not the temperature.
+  const alt = Math.max(0, Math.min(1, (pos.altitude + 6) / 60));
+  const skyTop = pos.visible
+    ? `hsl(${Math.round(212 - alt * 6)} ${Math.round(45 + alt * 30)}% ${Math.round(24 + alt * 26)}%)`
+    : "hsl(230 55% 12%)";
+  const skyBottom = pos.visible
+    ? `hsl(${Math.round(38 - alt * 6)} ${Math.round(85 - alt * 30)}% ${Math.round(48 + alt * 22)}%)`
+    : "hsl(226 45% 18%)";
 
   return (
     <div className="glass-card p-5 shadow-card">
@@ -60,8 +68,11 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
 
       {/* Animated sun-arc: solid path from rise to set, with the current
           sun position tracked along it. */}
-      <div className="mt-4 rounded-2xl bg-gradient-to-b from-primary/10 to-background/40 p-3">
-        <svg viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet" className="w-full">
+      <div
+        className="mt-4 overflow-hidden rounded-2xl p-3 pt-5"
+        style={{ background: `linear-gradient(180deg, ${skyTop} 0%, ${skyBottom} 100%)` }}
+      >
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" className="w-full overflow-visible">
           <defs>
             <linearGradient id="sun-arc-grad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0" stopColor="hsl(28 90% 60%)" stopOpacity="0.85" />
@@ -72,12 +83,16 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
               <stop offset="0" stopColor="hsl(48 100% 75%)" />
               <stop offset="1" stopColor="hsl(28 90% 55%)" />
             </radialGradient>
+            <radialGradient id="sun-arc-glow" cx="50%" cy="50%">
+              <stop offset="0" stopColor="hsl(48 100% 78%)" stopOpacity={0.55 * (0.35 + alt)} />
+              <stop offset="1" stopColor="hsl(38 100% 60%)" stopOpacity="0" />
+            </radialGradient>
           </defs>
           {/* Horizon */}
-          <line x1="8" y1="132" x2="392" y2="132" stroke="hsl(var(--foreground) / 0.25)" strokeDasharray="3 4" />
+          <line x1="8" y1="168" x2="392" y2="168" stroke="hsl(var(--foreground) / 0.3)" strokeDasharray="3 4" />
           {/* Arc */}
           <path
-            d={`M 24 132 A ${arcR} ${arcR} 0 0 1 376 132`}
+            d={`M 24 168 A ${arcRx} ${arcRy} 0 0 1 376 168`}
             fill="none"
             stroke="url(#sun-arc-grad)"
             strokeWidth="3"
@@ -85,17 +100,18 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
             vectorEffect="non-scaling-stroke"
           />
           {/* Endpoint markers */}
-          <circle cx="24" cy="132" r="4" fill="hsl(28 80% 60%)" />
-          <text x="24" y="152" textAnchor="middle" fontSize="13" fill="hsl(var(--foreground))" fontWeight="600">
+          <circle cx="24" cy="168" r="4" fill="hsl(28 80% 60%)" />
+          <text x="26" y="190" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100%)" fontWeight="700">
             {fmtTime(ev.rise)}
           </text>
-          <circle cx="376" cy="132" r="4" fill="hsl(18 80% 55%)" />
-          <text x="376" y="152" textAnchor="middle" fontSize="13" fill="hsl(var(--foreground))" fontWeight="600">
+          <circle cx="376" cy="168" r="4" fill="hsl(18 80% 55%)" />
+          <text x="374" y="190" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100%)" fontWeight="700">
             {fmtTime(ev.set)}
           </text>
           {/* Current sun position */}
           {!belowHorizon && (
             <g>
+              <circle cx={sunX} cy={sunY} r="46" fill="url(#sun-arc-glow)" />
               <circle cx={sunX} cy={sunY} r="18" fill="url(#sun-arc-sun)" opacity="0.32" />
               <circle cx={sunX} cy={sunY} r="9" fill="url(#sun-arc-sun)">
                 <animate attributeName="r" values="8.5;10.5;8.5" dur="2.4s" repeatCount="indefinite" />
@@ -103,7 +119,7 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
             </g>
           )}
           {belowHorizon && (
-            <text x="200" y="80" textAnchor="middle" fontSize="14" fill="hsl(var(--foreground) / 0.8)" fontWeight="600">
+            <text x="200" y="100" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100% / 0.85)" fontWeight="600">
               Below the horizon
             </text>
           )}
