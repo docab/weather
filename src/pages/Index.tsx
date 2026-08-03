@@ -14,7 +14,7 @@ import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus, RotateCw } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
-import { dynamicSkyStyle, describeWeather, gradientInk, thermalTint } from "@/lib/weatherCodes";
+import { skyOnlyStyle, sunPhaseOf, describeWeather, gradientInk, thermalTint } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 10;
@@ -86,13 +86,19 @@ const Index = () => {
   const activeWeather = activeQuery?.data?.weather;
   const meteorActive = activeShowers(new Date()).some(s => s.isPeakingNow);
   const skyInfo = activeWeather ? describeWeather(activeWeather.weatherCode, activeWeather.isDay) : null;
+  // The app canvas is the SAME live sky as the hero — no temperature tint at
+  // rest. The thermal tint only fades in once you scroll past the midpoint.
   const pageBgStyle = activeWeather && skyInfo
-    ? dynamicSkyStyle(skyInfo.sky, activeWeather.feelsLike, {
-        windSpeed: activeWeather.windSpeed,
-        humidity: activeWeather.humidity,
+    ? skyOnlyStyle(skyInfo.sky, {
         cloudCover: activeWeather.cloudCover,
-        uvIndex: activeWeather.uvIndex,
-        isDay: activeWeather.isDay,
+        precipMm: activeWeather.precipMm,
+        precipProb: activeWeather.precipProb,
+        phase: sunPhaseOf(
+          Date.now(),
+          activeWeather.daily?.[0]?.sunrise,
+          activeWeather.daily?.[0]?.sunset,
+          activeWeather.isDay,
+        ),
       })
     : { background: "hsl(var(--background))" };
 
@@ -101,7 +107,7 @@ const Index = () => {
   // switch to dark ink only happens on genuinely bright daytime skies.
   const ink = !activeWeather || !activeWeather.isDay
     ? "light"
-    : gradientInk(pageBgStyle as React.CSSProperties, 74);
+    : gradientInk(pageBgStyle as React.CSSProperties, 66);
   const activeLocation = allLocations[activeIdx] ?? allLocations[0];
   const showLocationHeader = activeTab !== "briefing" && !!activeLocation;
 
@@ -138,6 +144,39 @@ const Index = () => {
   // --background). The live sky lives inside the hero only.
   const thermal = activeWeather ? thermalTint(activeWeather.feelsLike) : "220 22% 10%";
 
+  // ------------------------------------------------------------------
+  // Scroll-driven temperature tint. At the top of the page the canvas is
+  // pure live sky. Once the top edge of the "Right now" card crosses the
+  // vertical midpoint of the viewport, the ambient thermal tint fades in.
+  // Scrolling back up returns the canvas to pure sky.
+  // ------------------------------------------------------------------
+  const [tintK, setTintK] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const el = document.getElementById("feels");
+      const mid = window.innerHeight * 0.5;
+      if (!el) {
+        // No "Right now" card on this tab — fall back to raw scroll depth.
+        setTintK(Math.max(0, Math.min(1, window.scrollY / (window.innerHeight * 0.6))));
+        return;
+      }
+      const top = el.getBoundingClientRect().top;
+      // 0 while the card sits below the midpoint, 1 once it's 240px above it.
+      setTintK(Math.max(0, Math.min(1, (mid - top) / 240)));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [activeTab, activeId, activeQuery?.data]);
+
   return (
     <div
       className={`relative min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
@@ -149,9 +188,15 @@ const Index = () => {
         {activeTab === "stars"
           ? <><AuroraFX active={meteorActive} /><MeteorFX active={meteorActive} /></>
           : activeWeather && <WeatherFX weather={activeWeather} intensity={1} />}
-        {/* Soft veil for legibility — lighter than before so the sky shows through. */}
-        {/* Very subtle veil — hero sky bleeds through on every tab. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/25" />
+        {/* Ambient temperature tint — invisible at the top of the page, fades
+            in as you scroll past the "Right now" card. */}
+        <div
+          className="absolute inset-0 transition-opacity duration-300"
+          style={{
+            background: `linear-gradient(180deg, hsl(${thermal} / 0.35) 0%, hsl(${thermal} / 0.92) 55%, hsl(${thermal}) 100%)`,
+            opacity: tintK,
+          }}
+        />
       </div>
 
       {showLocationHeader && (
