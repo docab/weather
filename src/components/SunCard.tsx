@@ -1,7 +1,7 @@
 import type { LocationConditions } from "@/lib/types";
-import { getSunPosition, sunEvents, compass } from "@/lib/astronomy";
+import { getSunPosition, getMoonPosition, getMoonPhase, sunEvents, compass } from "@/lib/astronomy";
 import { Sun } from "lucide-react";
-import { AnimatedSun } from "./fx/WeatherFX";
+import { AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
 
 /**
  * Everything about the Sun for the active location — rise, set,
@@ -18,23 +18,63 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
 
   const dayLen = ev.rise && ev.set ? (ev.set.getTime() - ev.rise.getTime()) / 3_600_000 : null;
 
-  // Progress across the arc: 0 at sunrise, 1 at sunset. Clamp before/after.
-  const progress = (() => {
-    if (!ev.rise || !ev.set) return 0.5;
-    const t = now.getTime();
-    const r = ev.rise.getTime();
-    const s = ev.set.getTime();
-    if (t <= r) return 0;
-    if (t >= s) return 1;
-    return (t - r) / (s - r);
-  })();
-  // Elliptical arc so the apex sits well inside the viewBox — a semicircle
-  // as wide as the card would put the top of the curve above y=0 (clipped).
-  const arcCx = 200, arcCy = 168, arcRx = 176, arcRy = 116;
-  const angle = Math.PI * (1 - progress); // π at rise, 0 at set
-  const sunX = arcCx + arcRx * Math.cos(angle);
-  const sunY = arcCy - arcRy * Math.sin(angle);
   const belowHorizon = !pos.visible;
+
+  /* ------------------------------------------------------------------
+   * Real trajectory. Instead of drawing a decorative semicircle and
+   * guessing where the sun sits on it, we sample the ACTUAL solar
+   * elevation across the day and build the path from those samples. The
+   * marker is then placed with the very same mapping using the live
+   * altitude, so the icon is always exactly on the curve and at the
+   * true height in the sky.
+   * ---------------------------------------------------------------- */
+  const HORIZON_Y = 168;
+  const TOP_Y = 34;          // generous top padding — the apex never clips
+  const X0 = 24, X1 = 376;
+
+  // Which body are we tracking? Sun by day, Moon once it's below the horizon.
+  const nightMode = belowHorizon;
+  const moonPhase = getMoonPhase(now);
+
+  const startMs = nightMode
+    ? (ev.set ? ev.set.getTime() : now.getTime() - 6 * 3_600_000)
+    : (ev.rise ? ev.rise.getTime() : now.getTime() - 6 * 3_600_000);
+  const endMs = nightMode
+    ? (ev.rise && ev.set
+        ? (ev.rise.getTime() > ev.set.getTime() ? ev.rise.getTime() : ev.set.getTime() + 12 * 3_600_000)
+        : now.getTime() + 6 * 3_600_000)
+    : (ev.set ? ev.set.getTime() : now.getTime() + 6 * 3_600_000);
+
+  const altAt = (ms: number) =>
+    nightMode
+      ? getMoonPosition(new Date(ms), location.latitude, location.longitude).altitude
+      : getSunPosition(new Date(ms), location.latitude, location.longitude).altitude;
+
+  const SAMPLES = 48;
+  const samples: { t: number; alt: number }[] = [];
+  for (let i = 0; i <= SAMPLES; i++) {
+    const k = i / SAMPLES;
+    samples.push({ t: k, alt: altAt(startMs + (endMs - startMs) * k) });
+  }
+  // Peak elevation of THIS trajectory drives the vertical scale, so a low
+  // winter sun visibly hugs the horizon and a summer sun towers.
+  const peakAlt = Math.max(6, ...samples.map(s => s.alt));
+  const toX = (k: number) => X0 + (X1 - X0) * Math.max(0, Math.min(1, k));
+  const toY = (alt: number) =>
+    HORIZON_Y - (HORIZON_Y - TOP_Y) * Math.max(0, Math.min(1, alt / peakAlt));
+
+  const pathD = samples
+    .map((s, i) => `${i === 0 ? "M" : "L"} ${toX(s.t).toFixed(1)} ${toY(s.alt).toFixed(1)}`)
+    .join(" ");
+
+  // Live position — same mapping, so it lands precisely on the drawn path.
+  const liveAlt = nightMode
+    ? getMoonPosition(now, location.latitude, location.longitude).altitude
+    : pos.altitude;
+  const progress = Math.max(0, Math.min(1, (now.getTime() - startMs) / Math.max(1, endMs - startMs)));
+  const sunX = toX(progress);
+  const sunY = toY(liveAlt);
+  const bodyVisible = liveAlt > -0.5;
   // Sky colour under the arc follows the sun's height, not the temperature.
   const alt = Math.max(0, Math.min(1, (pos.altitude + 6) / 60));
   const skyTop = pos.visible
@@ -52,7 +92,9 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-background/50">
-          <AnimatedSun size={56} warm={weather.feelsLike >= 22} />
+          {nightMode
+            ? <AnimatedMoon size={54} illumination={moonPhase.illumination} phase={moonPhase.phase} />
+            : <AnimatedSun size={56} warm={weather.feelsLike >= 22} />}
         </div>
         <div className="min-w-0">
           <div className="text-base font-semibold">
@@ -61,7 +103,9 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
               : "Below the horizon"}
           </div>
           <div className="text-xs text-muted-foreground">
-            UV index {Math.round(weather.uvIndex)} · {uvBlurb(weather.uvIndex)}
+            {nightMode
+              ? `Moon ${Math.round(moonPhase.illumination * 100)}% lit · next sunrise ${fmtTime(ev.rise)}`
+              : `UV index ${Math.round(weather.uvIndex)} · ${uvBlurb(weather.uvIndex)}`}
           </div>
         </div>
       </div>
@@ -79,6 +123,11 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
               <stop offset="0.5" stopColor="hsl(48 95% 65%)" stopOpacity="0.95" />
               <stop offset="1" stopColor="hsl(18 90% 55%)" stopOpacity="0.85" />
             </linearGradient>
+            <linearGradient id="moon-arc-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="hsl(220 40% 78%)" stopOpacity="0.7" />
+              <stop offset="0.5" stopColor="hsl(215 60% 88%)" stopOpacity="0.9" />
+              <stop offset="1" stopColor="hsl(230 40% 72%)" stopOpacity="0.7" />
+            </linearGradient>
             <radialGradient id="sun-arc-sun" cx="50%" cy="50%">
               <stop offset="0" stopColor="hsl(48 100% 75%)" />
               <stop offset="1" stopColor="hsl(28 90% 55%)" />
@@ -90,37 +139,37 @@ export function SunCard({ conditions }: { conditions: LocationConditions }) {
           </defs>
           {/* Horizon */}
           <line x1="8" y1="168" x2="392" y2="168" stroke="hsl(var(--foreground) / 0.3)" strokeDasharray="3 4" />
-          {/* Arc */}
+          {/* True elevation trajectory for today */}
           <path
-            d={`M 24 168 A ${arcRx} ${arcRy} 0 0 1 376 168`}
+            d={pathD}
             fill="none"
-            stroke="url(#sun-arc-grad)"
+            stroke={nightMode ? "url(#moon-arc-grad)" : "url(#sun-arc-grad)"}
             strokeWidth="3"
             strokeLinecap="round"
+            strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
           />
           {/* Endpoint markers */}
-          <circle cx="24" cy="168" r="4" fill="hsl(28 80% 60%)" />
-          <text x="26" y="190" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100%)" fontWeight="700">
-            {fmtTime(ev.rise)}
+          <circle cx={X0} cy={HORIZON_Y} r="4" fill={nightMode ? "hsl(220 40% 78%)" : "hsl(28 80% 60%)"} />
+          <text x={X0 + 2} y="190" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100%)" fontWeight="700">
+            {fmtTime(nightMode ? ev.set : ev.rise)}
           </text>
-          <circle cx="376" cy="168" r="4" fill="hsl(18 80% 55%)" />
-          <text x="374" y="190" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100%)" fontWeight="700">
-            {fmtTime(ev.set)}
+          <circle cx={X1} cy={HORIZON_Y} r="4" fill={nightMode ? "hsl(230 40% 72%)" : "hsl(18 80% 55%)"} />
+          <text x={X1 - 2} y="190" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100%)" fontWeight="700">
+            {fmtTime(nightMode ? ev.rise : ev.set)}
           </text>
-          {/* Current sun position */}
-          {!belowHorizon && (
+          {/* Live position — exactly on the curve */}
+          {bodyVisible ? (
             <g>
-              <circle cx={sunX} cy={sunY} r="46" fill="url(#sun-arc-glow)" />
-              <circle cx={sunX} cy={sunY} r="18" fill="url(#sun-arc-sun)" opacity="0.32" />
-              <circle cx={sunX} cy={sunY} r="9" fill="url(#sun-arc-sun)">
+              {!nightMode && <circle cx={sunX} cy={sunY} r="46" fill="url(#sun-arc-glow)" />}
+              <circle cx={sunX} cy={sunY} r="18" fill={nightMode ? "hsl(215 60% 88%)" : "url(#sun-arc-sun)"} opacity={nightMode ? 0.18 : 0.32} />
+              <circle cx={sunX} cy={sunY} r="9" fill={nightMode ? "hsl(215 65% 92%)" : "url(#sun-arc-sun)"}>
                 <animate attributeName="r" values="8.5;10.5;8.5" dur="2.4s" repeatCount="indefinite" />
               </circle>
             </g>
-          )}
-          {belowHorizon && (
-            <text x="200" y="100" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100% / 0.85)" fontWeight="600">
-              Below the horizon
+          ) : (
+            <text x="200" y="96" textAnchor="middle" fontSize="14" fill="hsl(0 0% 100% / 0.85)" fontWeight="600">
+              {nightMode ? "Night — the moon is below the horizon too" : "Below the horizon"}
             </text>
           )}
         </svg>

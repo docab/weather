@@ -24,18 +24,20 @@ export function AlertsHeroCard({ conditions }: { conditions: LocationConditions 
   if (!now) return null;
   const advice = buildAdvice(conditions, alerts[0]);
 
-  // Ultra-slim frosty pill: two tight lines, no card chrome.
+  // Spacious frosted banner: trend on top, advice underneath.
   return (
     <section
-      className="glass-pill flex items-center gap-2.5 overflow-hidden rounded-full px-3 py-1.5 shadow-card animate-fade-in"
+      className="glass-card flex min-h-[76px] items-center gap-3 overflow-hidden rounded-3xl px-4 py-3 animate-fade-in"
       aria-label="Smart alerts"
     >
-      <Zap className="h-3.5 w-3.5 shrink-0 text-primary" />
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate text-[11px] font-semibold text-foreground/95">{nextLine}</p>
-        <p className="truncate text-[10px] text-muted-foreground">{advice}</p>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-primary">
+        <Zap className="h-4.5 w-4.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-snug text-foreground">{nextLine}</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">{advice}</p>
       </div>
-      <span className="shrink-0 text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">2h</span>
+      <span className="shrink-0 self-start text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">2h</span>
     </section>
   );
 }

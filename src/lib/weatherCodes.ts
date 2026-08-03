@@ -300,13 +300,16 @@ export function skyOnlyStyle(sky: WeatherInfo["sky"], mods: SkyOnlyMods = {}): R
   const phase: SunPhase = mods.phase ?? (sky === "night" ? "night" : "day");
 
   // Base clear-sky colours per phase: [topH,topS,topL, botH,botS,botL]
+  // Natural daylight atmospheric palette — azure #3B82F6 → #93C5FD by day,
+  // slate/silver-blue when overcast, golden-hour amber at dusk, deep
+  // midnight indigo (#0F172A → #1E1B4B) at night. No brown, no green.
   const base: Record<SunPhase, number[]> = {
-    night:   [230, 55,  9, 224, 45, 16],
-    dawn:    [216, 45, 30,  22, 80, 58],
-    morning: [212, 62, 52, 205, 45, 74],
-    day:     [210, 72, 55, 202, 55, 80],
-    golden:  [212, 55, 46,  32, 78, 62],
-    dusk:    [228, 50, 20,  16, 78, 46],
+    night:   [222, 47, 11, 244, 47, 20],   // #0F172A → #1E1B4B
+    dawn:    [214, 60, 38,  26, 88, 62],
+    morning: [217, 88, 58, 213, 94, 78],
+    day:     [217, 91, 60, 213, 97, 78],   // #3B82F6 → #93C5FD
+    golden:  [214, 70, 52,  25, 95, 60],   // #F97316 horizon
+    dusk:    [258, 45, 30,  22, 92, 52],
   };
   let [th, ts, tl, bh, bs, bl] = base[phase];
 
@@ -314,12 +317,13 @@ export function skyOnlyStyle(sky: WeatherInfo["sky"], mods: SkyOnlyMods = {}): R
   const k = Math.max(0, Math.min(1, (cc - 15) / 75));
   const towards = (v: number, target: number, amt: number) => v + (target - v) * amt;
   const nightish = phase === "night" || phase === "dusk";
-  ts = towards(ts, 8, k * 0.9);
-  bs = towards(bs, 10, k * 0.85);
-  th = towards(th, 214, k * 0.8);
-  bh = towards(bh, 212, k * 0.7);
-  tl = towards(tl, nightish ? 12 : 42, k * 0.8);
-  bl = towards(bl, nightish ? 18 : 58, k * 0.75);
+  // Overcast target: clean slate/silver-blue #64748B → #94A3B8.
+  ts = towards(ts, 16, k * 0.95);
+  bs = towards(bs, 16, k * 0.95);
+  th = towards(th, 215, k * 0.9);
+  bh = towards(bh, 215, k * 0.9);
+  tl = towards(tl, nightish ? 14 : 47, k * 0.9);
+  bl = towards(bl, nightish ? 20 : 66, k * 0.9);
 
   if (wet) {
     // Rain: darker, flatter, slightly blue-grey.

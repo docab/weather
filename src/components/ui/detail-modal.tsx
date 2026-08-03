@@ -78,11 +78,12 @@ export function ExplainerBlock({
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</div>
         {value != null && <div className="text-sm font-bold tabular">{value}</div>}
       </div>
-      <p className="mt-1.5 text-xs text-foreground/85 leading-relaxed">
-        <span className="font-semibold text-foreground">What it is:</span> {what}
+      {/* "Right now" leads — larger + bolder. "What it is" follows, italic + muted. */}
+      <p className="mt-1.5 text-sm font-semibold leading-relaxed text-foreground">
+        <span className="text-foreground">Right now:</span> {means}
       </p>
-      <p className="mt-1 text-xs text-foreground/85 leading-relaxed">
-        <span className="font-semibold text-foreground">Right now:</span> {means}
+      <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground opacity-80">
+        <span className="font-semibold">What it is:</span> {what}
       </p>
     </div>
   );
