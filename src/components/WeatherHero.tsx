@@ -23,7 +23,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const ink = gradientInk(skyStyle);
   return (
     <div
-      className={`glass-card relative flex h-[calc(100dvh-13.5rem)] min-h-[26rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      className={`glass-card relative flex h-[calc(100dvh-5.5rem)] min-h-[30rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
       /* Card BASE carries the ambient thermal tint; the live sky is painted
          inside as its own layer so temperature never colours the sky. */
       style={{ backgroundColor: `hsl(${thermalTint(weather.feelsLike)})` }}
