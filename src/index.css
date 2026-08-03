@@ -195,12 +195,19 @@
     --primary: 212 90% 28%;
     --primary-foreground: 0 0% 100%;
   }
-  .ink-light .glass-card, .ink-light .glass-tile, .ink-light .glass-pill {
-    background-color: hsl(220 30% 6% / 0.34);
+  /* Dark sky → light ink: a whisper of white fill over the sky (7%). */
+  .ink-light .glass-card, .ink-light .glass-pill {
+    background-color: rgba(255, 255, 255, 0.07);
   }
-  .ink-dark .glass-card, .ink-dark .glass-tile, .ink-dark .glass-pill {
-    background-color: hsl(0 0% 100% / 0.34);
-    border-color: hsl(220 40% 6% / 0.12);
+  .ink-light .glass-tile { background-color: rgba(255, 255, 255, 0.05); }
+  /* Bright sky → dark ink: brighter frosted fill so black text stays crisp. */
+  .ink-dark .glass-card, .ink-dark .glass-pill {
+    background-color: rgba(255, 255, 255, 0.30);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  .ink-dark .glass-tile {
+    background-color: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.40);
   }
 
   /* "What it is" explainer lines — always italic + muted, sat directly
