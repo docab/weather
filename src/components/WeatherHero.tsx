@@ -1,5 +1,5 @@
 import type { LocationConditions } from "@/lib/types";
-import { describeWeather, skyOnlyStyle, sunPhaseOf, gradientInk, thermalTint } from "@/lib/weatherCodes";
+import { describeWeather, skyOnlyStyle, sunPhaseOf, gradientInk } from "@/lib/weatherCodes";
 import { CloudRain, Wind, Droplets, Sun, ArrowDown, ArrowUp, ChevronsDown } from "lucide-react";
 import { WeatherFX, AnimatedSun, AnimatedMoon } from "./fx/WeatherFX";
 import { getMoonPhase } from "@/lib/astronomy";
@@ -24,9 +24,6 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   return (
     <div
       className={`glass-card relative flex h-[calc(100dvh-10rem)] min-h-[27rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
-      /* Card BASE carries the ambient thermal tint; the live sky is painted
-         inside as its own layer so temperature never colours the sky. */
-      style={{ backgroundColor: `hsl(${thermalTint(weather.feelsLike)})` }}
     >
       <div className="pointer-events-none absolute inset-0" style={skyStyle} />
       <WeatherFX weather={weather} />
@@ -36,16 +33,6 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       {phaseOverlay && (
         <div className="pointer-events-none absolute inset-0" style={{ background: phaseOverlay }} />
       )}
-      {/* Legibility scrim — matched to the ink. Dark wash under white text,
-          light wash under black text. */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: ink === "light"
-            ? "linear-gradient(180deg, transparent 20%, hsl(220 40% 4% / 0.18) 60%, hsl(220 40% 4% / 0.42) 100%)"
-            : "linear-gradient(180deg, transparent 20%, hsl(0 0% 100% / 0.22) 60%, hsl(0 0% 100% / 0.5) 100%)",
-        }}
-      />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" />
       <div className={`relative flex flex-1 flex-col ${ink === "light" ? "[text-shadow:0_1px_3px_rgb(0_0_0_/_0.45)]" : "[text-shadow:0_1px_2px_rgb(255_255_255_/_0.35)]"}`}>
         <div className="flex items-start justify-between gap-3 pt-1">
