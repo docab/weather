@@ -200,7 +200,7 @@ const Index = () => {
       </div>
 
       {showLocationHeader && (
-        <div className="sticky top-0 z-30 -mx-4 mb-1 px-4 pt-[calc(env(safe-area-inset-top)+0.15rem)] pb-1.5 backdrop-blur-xl bg-background/20">
+        <div className="sticky top-0 z-30 -mx-4 mb-1 px-4 pt-[calc(env(safe-area-inset-top)+0.15rem)] pb-1.5 [backdrop-filter:blur(16px)_saturate(180%)] [-webkit-backdrop-filter:blur(16px)_saturate(180%)]">
           <div className="mx-auto flex max-w-2xl items-center justify-center gap-2">
             <button
               onClick={() => setActiveTab("briefing")}

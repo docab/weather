@@ -23,7 +23,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const ink = gradientInk(skyStyle);
   return (
     <div
-      className={`glass-card relative flex h-[calc(100dvh-5.5rem)] min-h-[30rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      className={`glass-card relative flex h-[calc(100dvh-10rem)] min-h-[27rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
       /* Card BASE carries the ambient thermal tint; the live sky is painted
          inside as its own layer so temperature never colours the sky. */
       style={{ backgroundColor: `hsl(${thermalTint(weather.feelsLike)})` }}
@@ -50,13 +50,8 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
       <div className={`relative flex flex-1 flex-col ${ink === "light" ? "[text-shadow:0_1px_3px_rgb(0_0_0_/_0.45)]" : "[text-shadow:0_1px_2px_rgb(255_255_255_/_0.35)]"}`}>
         <div className="flex items-start justify-between gap-3 pt-1">
           <div>
-            <div className="text-4xl font-bold leading-tight tracking-tight">
-              {oneWord(weather, info.sky)}
-            </div>
-            <div className="mt-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-foreground/75">
-              {envWord(weather)}
-            </div>
-            <div className="mt-1.5 text-xl font-semibold leading-snug text-foreground/95">{info.label}</div>
+            {/* Only the condition label sits at the top — no stacked descriptors. */}
+            <div className="text-3xl font-bold leading-tight tracking-tight">{info.label}</div>
             <div className="mt-4 tabular">
               <span className="block text-sm font-semibold uppercase tracking-[0.18em] text-foreground/85">
                 Feels like
@@ -89,10 +84,10 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
         </div>
 
         <div className="mt-4 grid grid-cols-4 gap-3">
-          <Stat icon={<CloudRain className="h-4 w-4" />} label="Rain" value={`${Math.round(weather.precipProb)}%`} anchor="rain" />
-          <Stat icon={<Wind className="h-4 w-4" />} label="Wind" value={`${Math.round(weather.windSpeed)} mph`} anchor="more" />
-          <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} anchor="more" />
-          <Stat icon={<Sun className="h-4 w-4" />} label="UV" value={String(Math.round(weather.uvIndex))} anchor="suggestions" />
+          <Stat icon={<CloudRain className="h-4 w-4" />} label="Rain" value={`${Math.round(weather.precipProb)}%`} note={rainWord(weather)} anchor="rain" />
+          <Stat icon={<Wind className="h-4 w-4" />} label="Wind" value={`${Math.round(weather.windSpeed)} mph`} note={windWord(weather.windSpeed)} anchor="more" />
+          <Stat icon={<Droplets className="h-4 w-4" />} label="Humidity" value={`${Math.round(weather.humidity)}%`} note={humidityWord(weather.humidity)} anchor="more" />
+          <Stat icon={<Sun className="h-4 w-4" />} label="UV" value={String(Math.round(weather.uvIndex))} note={uvWord(weather.uvIndex)} anchor="suggestions" />
         </div>
 
         {/* Scroll cue — the hero fills the screen, so tell people there's more. */}
@@ -109,42 +104,41 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   );
 }
 
-/**
- * A one-word environmental descriptor driven by the metric that's most out of
- * the ordinary right now — humidity, wind, UV or cold.
- */
-function envWord(w: LocationConditions["weather"]): string {
-  if (w.humidity >= 88 && w.feelsLike >= 18) return "Sticky";
-  if (w.humidity >= 80 && w.feelsLike >= 16) return "Muggy";
-  if (w.windSpeed >= 35) return "Gale-blown";
-  if (w.windSpeed >= 25) return "Breezy";
-  if (w.uvIndex >= 8) return "Harsh";
-  if (w.uvIndex >= 6) return "Bright";
-  if (w.humidity <= 30) return "Dry";
-  if (w.feelsLike <= 4) return "Biting";
-  if ((w.precipMm ?? 0) > 0.05) return "Wet";
-  return "Settled";
-}
-
-/**
- * A single word that sums the sky up at a glance — what you'd say if someone
- * asked "what's it like out?".
- */
-function oneWord(w: LocationConditions["weather"], sky: string): string {
+/* One-word descriptors, now shown inside their own metric tile. */
+function rainWord(w: LocationConditions["weather"]): string {
   const mm = w.precipMm ?? 0;
-  if (w.weatherCode >= 95) return "Stormy";
-  if (sky === "snow") return "Snowing";
   if (mm > 4) return "Pouring";
-  if (mm > 0.05) return mm > 1 ? "Raining" : "Drizzly";
-  if (w.weatherCode === 45 || w.weatherCode === 48) return "Foggy";
-  if (w.windSpeed >= 30) return "Blustery";
+  if (mm > 1) return "Raining";
+  if (mm > 0.05) return "Drizzly";
   if (w.precipProb >= 60) return "Showery";
-  if (w.cloudCover >= 85) return "Grey";
-  if (w.cloudCover >= 50) return "Cloudy";
-  if (!w.isDay) return w.cloudCover < 20 ? "Starry" : "Hazy";
-  if (w.feelsLike >= 32) return "Baking";
-  if (w.feelsLike <= 2) return "Freezing";
-  return w.cloudCover < 20 ? "Sunny" : "Bright";
+  if (w.precipProb >= 30) return "Maybe";
+  if (w.precipProb <= 5) return "Bone dry";
+  return "Dry";
+}
+function windWord(mph: number): string {
+  if (mph >= 47) return "Storm force";
+  if (mph >= 35) return "Gale";
+  if (mph >= 25) return "Blustery";
+  if (mph >= 16) return "Breezy";
+  if (mph >= 8) return "Light breeze";
+  if (mph >= 3) return "Calm";
+  return "Still";
+}
+function humidityWord(h: number): string {
+  if (h >= 88) return "Sticky";
+  if (h >= 80) return "Muggy";
+  if (h >= 65) return "Damp air";
+  if (h >= 45) return "Comfy";
+  if (h >= 30) return "Crisp";
+  return "Dry air";
+}
+function uvWord(uv: number): string {
+  if (uv >= 11) return "Extreme";
+  if (uv >= 8) return "Harsh";
+  if (uv >= 6) return "High";
+  if (uv >= 3) return "Moderate";
+  if (uv >= 1) return "Low";
+  return "None";
 }
 
 /**
@@ -182,7 +176,7 @@ function sunPhaseOverlay(w: LocationConditions["weather"]): string | null {
   return null;
 }
 
-function Stat({ icon, label, value, anchor }: { icon: React.ReactNode; label: string; value: string; anchor?: string }) {
+function Stat({ icon, label, value, note, anchor }: { icon: React.ReactNode; label: string; value: string; note?: string; anchor?: string }) {
   const onClick = anchor ? () => {
     const el = document.getElementById(anchor);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -194,6 +188,9 @@ function Stat({ icon, label, value, anchor }: { icon: React.ReactNode; label: st
         <span className="text-[10px] font-semibold uppercase tracking-wider">{label}</span>
       </div>
       <div className="mt-1 text-base font-bold tabular">{value}</div>
+      {note && (
+        <div className="text-[10px] font-semibold leading-tight text-foreground/75">{note}</div>
+      )}
     </button>
   );
 }
