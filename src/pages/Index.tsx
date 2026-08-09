@@ -100,7 +100,7 @@ const Index = () => {
           activeWeather.isDay,
         ),
       })
-    : { background: "hsl(var(--background))" };
+    : skyOnlyStyle("clear", { cloudCover: 5, phase: "day" });
 
   const NowIcon = skyInfo?.Icon ?? Eye;
   // The page backdrop also carries cloud/rain layers that darken it, so the
@@ -179,12 +179,12 @@ const Index = () => {
 
   return (
     <div
-      className={`relative min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      className={`relative isolate min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
       style={{ "--thermal-bg": thermal } as React.CSSProperties}
     >
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
           The Stars tab swaps in aurora + meteor showers. */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" style={pageBgStyle as React.CSSProperties}>
+      <div className="pointer-events-none fixed inset-0 -z-[1] overflow-hidden" style={pageBgStyle as React.CSSProperties}>
         {activeTab === "stars"
           ? <><AuroraFX active={meteorActive} /><MeteorFX active={meteorActive} /></>
           : activeWeather && <WeatherFX weather={activeWeather} intensity={1} />}

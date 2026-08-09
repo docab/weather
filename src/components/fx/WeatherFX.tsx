@@ -231,8 +231,10 @@ function CloudPuff({ fill, seed }: { fill: string; seed: number }) {
 /* Empty-sky atmospheric gradient — a hint of warmth at the horizon and
  * a couple of slow-moving wisps so a "clear" sky doesn't look static. */
 export function ClearAir({ warm, day }: { warm?: boolean; day?: boolean }) {
-  const top = day ? (warm ? "hsl(28 80% 18% / 0)" : "hsl(210 70% 14% / 0)") : "hsl(232 50% 8% / 0)";
-  const bot = day ? (warm ? "hsl(20 90% 30% / .55)" : "hsl(200 70% 28% / .55)") : "hsl(240 60% 14% / .55)";
+  const top = "transparent";
+  const bot = day
+    ? (warm ? "hsl(28 92% 68% / .18)" : "hsl(205 92% 82% / .16)")
+    : "hsl(238 52% 30% / .16)";
   return (
     <div className="fx-layer">
       <div style={{
