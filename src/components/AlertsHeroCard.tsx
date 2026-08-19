@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LocationConditions, WeatherHour } from "@/lib/types";
 import { Zap, CloudRain, Wind, Sun, Thermometer, Umbrella, Droplets, Cloud, Moon } from "lucide-react";
+import { Rain } from "./fx/WeatherFX";
 
 /**
  * Top-of-Now hybrid: **Next 2 Hours** (immediate window) + **Smart Alerts**
@@ -23,22 +24,81 @@ export function AlertsHeroCard({ conditions }: { conditions: LocationConditions 
 
   if (!now) return null;
   const advice = buildAdvice(conditions, alerts[0]);
+  const rain = rainPriority(conditions);
+  const headline = rain?.line ?? nextLine;
+  const HeadIcon = rain ? CloudRain : Zap;
 
   // Spacious frosted banner: trend on top, advice underneath.
   return (
     <section
-      className="glass-card flex min-h-[76px] items-center gap-3 overflow-hidden rounded-3xl px-4 py-3 animate-fade-in"
+      className="glass-card relative flex min-h-[76px] items-center gap-3 overflow-hidden rounded-3xl px-4 py-3 animate-fade-in"
       aria-label="Smart alerts"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-primary">
-        <Zap className="h-4.5 w-4.5" />
+      {rain && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-90">
+          <Rain category={rain.category} intensity={rain.category === "drizzle" ? 0.5 : rain.category === "heavy" ? 0.8 : 0.6} />
+          {rain.category === "heavy" && <Splashes />}
+        </div>
+      )}
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-primary">
+        <HeadIcon className="h-4.5 w-4.5" />
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold leading-snug text-foreground">{nextLine}</p>
+      <div className="relative min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-snug text-foreground">{headline}</p>
         <p className="mt-1 text-xs leading-snug text-muted-foreground">{advice}</p>
       </div>
-      <span className="shrink-0 self-start text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">2h</span>
+      <span className="relative shrink-0 self-start text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">2h</span>
     </section>
+  );
+}
+
+/**
+ * Rain takes the top line whenever it's actually wet out, or the chance of
+ * rain within the next two hours crosses 50%. Returns the headline plus the
+ * animation category to render inside the banner glass.
+ */
+function rainPriority(c: LocationConditions): { line: string; category: "drizzle" | "light" | "moderate" | "heavy" } | null {
+  const w = c.weather;
+  const mm = w.precipMm ?? 0;
+  const nowMs = Date.now();
+  const soon = w.hourly.filter(h => {
+    const t = new Date(h.time).getTime();
+    return t >= nowMs - 30 * 60_000 && t <= nowMs + 2 * 3600_000;
+  });
+  const peak = Math.max(0, ...soon.map(h => h.precipProb ?? 0));
+  const peakMm = Math.max(mm, ...soon.map(h => h.precipMm ?? 0));
+  if (mm <= 0.05 && peak < 50) return null;
+
+  const category: "drizzle" | "light" | "moderate" | "heavy" =
+    peakMm > 8 ? "heavy" : peakMm >= 2 ? "moderate" : peakMm >= 0.5 ? "light" : "drizzle";
+  const word = category === "heavy" ? "Heavy showers" : category === "moderate" ? "Showers"
+    : category === "light" ? "Light rain" : "Drizzle";
+
+  if (mm > 0.05) {
+    return { line: `${word} falling right now — ${mm.toFixed(1)} mm/h, ${Math.round(w.precipProb)}% chance it keeps up.`, category };
+  }
+  // Find the first future hour that crosses the threshold and turn it into minutes.
+  const hit = soon.find(h => (h.precipProb ?? 0) >= 50 && new Date(h.time).getTime() > nowMs);
+  const mins = hit ? Math.max(5, Math.round((new Date(hit.time).getTime() - nowMs) / 60_000)) : 60;
+  return { line: `${word} expected in ${mins} mins (${Math.round(peak)}% chance).`, category };
+}
+
+/** Splash ripples along the bottom edge for downpours. */
+function Splashes() {
+  return (
+    <div className="absolute inset-x-0 bottom-0 h-4">
+      {Array.from({ length: 10 }).map((_, i) => (
+        <span
+          key={i}
+          className="absolute bottom-0 rounded-full border border-white/50"
+          style={{
+            left: `${(i * 9 + 4) % 96}%`,
+            width: 10, height: 4,
+            animation: `fx-ripple ${1.4 + (i % 4) * 0.25}s ease-out ${(i % 6) * 0.22}s infinite`,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
