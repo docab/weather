@@ -23,7 +23,7 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
   const ink = gradientInk(skyStyle);
   return (
     <div
-      className={`glass-card relative flex h-[calc(100dvh-10rem)] min-h-[27rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      className={`glass-card relative flex h-[calc(100dvh-19.5rem)] min-h-[22rem] flex-col overflow-hidden p-6 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
     >
       <div className="pointer-events-none absolute inset-0" style={skyStyle} />
       <WeatherFX weather={weather} />
@@ -65,9 +65,6 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
           <span className="inline-flex items-center gap-1 tabular">
             <ArrowDown className="h-3.5 w-3.5" /> {Math.round(weather.low)}°
           </span>
-          <span className="ml-2 truncate text-xs text-foreground/85">
-            {conditions.location.customName || conditions.location.name}
-          </span>
         </div>
 
         <div className="mt-4 grid grid-cols-4 gap-3">
@@ -94,13 +91,15 @@ export function WeatherHero({ conditions }: { conditions: LocationConditions }) 
 /* One-word descriptors, now shown inside their own metric tile. */
 function rainWord(w: LocationConditions["weather"]): string {
   const mm = w.precipMm ?? 0;
-  if (mm > 4) return "Pouring";
-  if (mm > 1) return "Raining";
-  if (mm > 0.05) return "Drizzly";
-  if (w.precipProb >= 60) return "Showery";
-  if (w.precipProb >= 30) return "Maybe";
-  if (w.precipProb <= 5) return "Bone dry";
-  return "Dry";
+  const prob = w.precipProb ?? 0;
+  if (mm > 8) return "Downpour";
+  if (mm >= 2) return "Showers";
+  if (mm >= 0.5) return "Light drizzle";
+  if (mm > 0) return "Mist";
+  if (prob >= 70) return "Showers likely";
+  if (prob >= 40) return "Drizzle possible";
+  if (prob > 0) return "Mostly dry";
+  return "No rain";
 }
 function windWord(mph: number): string {
   if (mph >= 47) return "Storm force";

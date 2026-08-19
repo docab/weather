@@ -376,3 +376,33 @@ export function gradientInk(style: React.CSSProperties | undefined, threshold = 
   const avg = ls.reduce((a, b) => a + b, 0) / ls.length;
   return avg > threshold ? "dark" : "light";
 }
+/**
+ * Scroll-activated canvas tint. Unlike `thermalTint` (a muted ambient wash),
+ * this is the vivid, saturated version that fades in once the page is
+ * scrolled past the viewport midpoint: crimson heat, icy blues, moody slate
+ * for rain, polar white for snow.
+ */
+export function scrollTint(
+  feelsLike: number,
+  opts: { weatherCode?: number; precipMm?: number; isDay?: boolean } = {},
+): string {
+  const code = opts.weatherCode ?? 0;
+  const snowy = (code >= 71 && code <= 77) || code === 85 || code === 86;
+  const stormy = code >= 95 || (code >= 80 && code <= 82) || (code >= 63 && code <= 67);
+  const rainy = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (opts.precipMm ?? 0) > 0.05;
+
+  if (snowy || feelsLike <= -6) return "205 45% 88%";       // polar white / silver-blue
+  if (stormy) return "215 32% 20%";                          // deep moody slate
+  if (rainy) return "212 30% 26%";                           // wet slate
+  const t = Math.max(-15, Math.min(48, feelsLike));
+  if (t < 0)       return "202 78% 62%";  // vivid frosty blue
+  if (t < 5)       return "200 70% 55%";
+  if (t < 10)      return "205 55% 42%";
+  if (t < 16)      return "210 42% 32%";
+  if (t < 21)      return "214 30% 26%";
+  if (t < 25)      return "34 45% 34%";
+  if (t < 28)      return "28 62% 38%";
+  if (t < 32)      return "18 74% 40%";   // rich thermal red
+  if (t < 38)      return "10 82% 38%";
+  return "4 88% 34%";                      // scorching crimson
+}
