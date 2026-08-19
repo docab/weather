@@ -217,7 +217,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set("longitude", String(lon));
   url.searchParams.set("current", [
     "temperature_2m", "apparent_temperature", "is_day", "precipitation",
-    "rain", "weather_code", "wind_speed_10m", "wind_gusts_10m", "relative_humidity_2m",
+    "rain", "weather_code", "wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "relative_humidity_2m",
     "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "visibility",
     "pressure_msl", "dew_point_2m"
   ].join(","));
@@ -386,6 +386,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     rainTotal: d.precipitation_sum[0] ?? 0,
     windSpeed: c.wind_speed_10m,
     windGust: c.wind_gusts_10m,
+    windDirection: c.wind_direction_10m,
     uvIndex: d.uv_index_max[0] ?? 0,
     humidity: c.relative_humidity_2m,
     weatherCode: reconciledCode,
@@ -556,4 +557,61 @@ export function makeLocation(g: GeoResult, opts: { id?: string; isAutoDetected?:
 
 function cryptoRandom() {
   return Math.random().toString(36).slice(2, 10);
+}
+// ---------- Today in history (10-year climate baseline) ----------
+
+export interface ClimateHistory {
+  years: number;
+  avgHigh: number;
+  avgTemp: number;
+  hottest: number;
+  hottestYear: number;
+  coldest: number;
+  coldestYear: number;
+}
+
+/**
+ * Ten years of ERA5 archive readings for *this calendar date* at a location.
+ * Used by the "Today in History" block in the deeper metrics card.
+ */
+export async function fetchTodayInHistory(lat: number, lon: number, date = new Date()): Promise<ClimateHistory | null> {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const thisYear = date.getFullYear();
+  const years: number[] = [];
+  for (let y = thisYear - 10; y <= thisYear - 1; y++) years.push(y);
+
+  const results = await Promise.all(years.map(async y => {
+    const url = new URL("https://archive-api.open-meteo.com/v1/archive");
+    url.searchParams.set("latitude", String(lat));
+    url.searchParams.set("longitude", String(lon));
+    url.searchParams.set("start_date", `${y}-${mm}-${dd}`);
+    url.searchParams.set("end_date", `${y}-${mm}-${dd}`);
+    url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,temperature_2m_mean");
+    url.searchParams.set("timezone", "auto");
+    try {
+      const r = await fetch(url.toString());
+      if (!r.ok) return null;
+      const j = await r.json();
+      const hi = j.daily?.temperature_2m_max?.[0];
+      const lo = j.daily?.temperature_2m_min?.[0];
+      const mean = j.daily?.temperature_2m_mean?.[0];
+      if (typeof hi !== "number" || typeof lo !== "number") return null;
+      return { year: y, hi, lo, mean: typeof mean === "number" ? mean : (hi + lo) / 2 };
+    } catch { return null; }
+  }));
+
+  const rows = results.filter(Boolean) as { year: number; hi: number; lo: number; mean: number }[];
+  if (!rows.length) return null;
+  const hottest = rows.reduce((a, b) => (b.hi > a.hi ? b : a));
+  const coldest = rows.reduce((a, b) => (b.lo < a.lo ? b : a));
+  return {
+    years: rows.length,
+    avgHigh: rows.reduce((s, r) => s + r.hi, 0) / rows.length,
+    avgTemp: rows.reduce((s, r) => s + r.mean, 0) / rows.length,
+    hottest: hottest.hi,
+    hottestYear: hottest.year,
+    coldest: coldest.lo,
+    coldestYear: coldest.year,
+  };
 }

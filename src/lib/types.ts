@@ -83,6 +83,8 @@ export interface WeatherData {
   rainTotal: number;
   windSpeed: number;
   windGust: number;
+  /** Degrees the wind is blowing FROM (meteorological). */
+  windDirection?: number;
   uvIndex: number;
   humidity: number;
   weatherCode: number;
