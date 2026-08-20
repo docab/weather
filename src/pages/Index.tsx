@@ -14,7 +14,7 @@ import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus, RotateCw } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
-import { skyOnlyStyle, sunPhaseOf, describeWeather, gradientInk, thermalTint } from "@/lib/weatherCodes";
+import { skyOnlyStyle, sunPhaseOf, describeWeather, gradientInk, thermalTint, scrollTint } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 10;
@@ -143,6 +143,24 @@ const Index = () => {
   // Ambient thermal tint for the whole app shell (cards inherit it through
   // --background). The live sky lives inside the hero only.
   const thermal = activeWeather ? thermalTint(activeWeather.feelsLike) : "220 22% 10%";
+  // Vivid, saturated version used for the scroll-activated canvas wash.
+  const vivid = activeWeather
+    ? scrollTint(activeWeather.feelsLike, {
+        weatherCode: activeWeather.weatherCode,
+        precipMm: activeWeather.precipMm,
+        isDay: activeWeather.isDay,
+      })
+    : thermal;
+
+  // Physical weather effects on the glass cards: frost below zero, a snow cap
+  // during snowfall, condensation streaks while it rains.
+  const code = activeWeather?.weatherCode ?? 0;
+  const snowing = (code >= 71 && code <= 77) || code === 85 || code === 86;
+  const raining = !snowing && (((activeWeather?.precipMm ?? 0) > 0.05) ||
+    (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95);
+  const freezing = (activeWeather?.temp ?? 10) < 0;
+  const envClass = [snowing && "env-snow", freezing && "env-frost", raining && "env-rain"]
+    .filter(Boolean).join(" ");
 
   // ------------------------------------------------------------------
   // Scroll-driven temperature tint. At the top of the page the canvas is
@@ -179,7 +197,7 @@ const Index = () => {
 
   return (
     <div
-      className={`relative isolate min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      className={`relative isolate min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"} ${envClass}`}
       style={{ "--thermal-bg": thermal } as React.CSSProperties}
     >
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
@@ -193,10 +211,12 @@ const Index = () => {
         <div
           className="absolute inset-0 transition-opacity duration-300"
           style={{
-            background: `linear-gradient(180deg, hsl(${thermal} / 0.35) 0%, hsl(${thermal} / 0.92) 55%, hsl(${thermal}) 100%)`,
+            background: `linear-gradient(180deg, hsl(${vivid} / 0.42) 0%, hsl(${vivid} / 0.94) 55%, hsl(${vivid}) 100%)`,
             opacity: tintK,
           }}
         />
+        {/* Delicate snowflakes drifting behind the cards. */}
+        {snowing && <SnowDrift />}
       </div>
 
       {showLocationHeader && (
