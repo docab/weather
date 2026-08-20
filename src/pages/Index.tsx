@@ -415,24 +415,6 @@ function SnowDrift() {
   );
 }
 
-function TabBtnLegacy({ active, onClick, label, children }: {
-  active: boolean; onClick: () => void; label: string; children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={active}
-      className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl py-2 transition active:scale-95 ${active
-        ? "bg-primary/20 text-primary shadow-inner"
-        : "text-muted-foreground hover:text-foreground"}`}
-    >
-      {children}
-      <span className="text-[11px] font-semibold">{label}</span>
-    </button>
-  );
-}
-
 /** Clock reading in the location's own timezone. */
 function fmtClock(ms: number, tz: string): string {
   return new Intl.DateTimeFormat("en-GB", {
