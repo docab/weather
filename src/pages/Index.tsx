@@ -9,7 +9,10 @@ import { TravelView } from "@/components/TravelView";
 import { MeView } from "@/components/MeView";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useConditionsForLocations } from "@/hooks/useConditions";
-import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations } from "@/lib/storage";
+import {
+  loadLocations, loadPrimaryId, savePrimaryId, saveLocations,
+  loadNameOverrides, saveNameOverride, reorderLocations,
+} from "@/lib/storage";
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus, RotateCw } from "lucide-react";
@@ -26,6 +29,7 @@ const TAB_ORDER: TabKey[] = ["briefing", "today", "forecast", "stars", "travel",
 const Index = () => {
   const geo = useGeolocation();
   const [savedLocations, setSavedLocations] = useState<Location[]>(() => loadLocations());
+  const [nameMap, setNameMap] = useState<Record<string, string>>(() => loadNameOverrides());
   const [activeId, setActiveId] = useState<string>("");
   const [addOpen, setAddOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("today");
@@ -37,8 +41,9 @@ const Index = () => {
     for (const l of savedLocations) {
       if (!geo.location || l.id !== geo.location.id) list.push(l);
     }
-    return list.slice(0, MAX_LOCATIONS);
-  }, [geo.location, savedLocations]);
+    return list.slice(0, MAX_LOCATIONS).map(l =>
+      nameMap[l.id] ? { ...l, customName: nameMap[l.id] } : l);
+  }, [geo.location, savedLocations, nameMap]);
 
   // Initialise active tab
   useEffect(() => {
@@ -76,6 +81,16 @@ const Index = () => {
   const handleSelect = (id: string) => {
     setActiveId(id);
     savePrimaryId(id);
+  };
+
+  /** Give a place a nickname ("Home", "Work"). Empty string clears it. */
+  const renamePlace = (id: string, name: string) => {
+    setNameMap({ ...saveNameOverride(id, name) });
+  };
+
+  /** Nudge a saved place up or down the list. */
+  const movePlace = (id: string, dir: -1 | 1) => {
+    setSavedLocations(reorderLocations(savedLocations, id, dir));
   };
 
   // Swipe-to-change-tab intentionally removed — tab content stays fixed to
@@ -280,6 +295,8 @@ const Index = () => {
                   queries={queries}
                   onOpenLocation={(id) => { handleSelect(id); setActiveTab("today"); }}
                   onRemoveLocation={removeLocation}
+                  onRenameLocation={renamePlace}
+                  onMoveLocation={movePlace}
                 />
                 {allLocations.length < MAX_LOCATIONS && (
                   <div className="mt-3 flex justify-center">
