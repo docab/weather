@@ -489,7 +489,7 @@ export async function fetchPollenAndAqi(lat: number, lon: number): Promise<{ pol
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));
   url.searchParams.set("current", [
-    "european_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone", ...POLLEN_KEYS
+    "european_aqi", "pm10", "pm2_5", "nitrogen_dioxide", "ozone", "sulphur_dioxide", "carbon_monoxide", ...POLLEN_KEYS
   ].join(","));
   url.searchParams.set("timezone", "Europe/London");
 
@@ -531,6 +531,8 @@ export async function fetchPollenAndAqi(lat: number, lon: number): Promise<{ pol
     pm10: c.pm10 ?? 0,
     no2: c.nitrogen_dioxide ?? 0,
     o3: c.ozone ?? 0,
+    so2: c.sulphur_dioxide ?? 0,
+    co: c.carbon_monoxide ?? 0,
     dominantPollutant: dominant.label,
   };
 
