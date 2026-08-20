@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { AqiData } from "@/lib/types";
+import { DetailModal } from "./ui/detail-modal";
 import { SeverityBadge } from "./SeverityBadge";
 import { SeverityBar } from "./SeverityBar";
 import { aqiLabel, severityRank } from "@/lib/severity";
@@ -11,9 +13,16 @@ export function AqiCard({ aqi }: { aqi: AqiData }) {
     { label: "PM10", value: aqi.pm10, unit: "µg/m³", scale: 50 },
     { label: "NO₂", value: aqi.no2, unit: "µg/m³", scale: 200 },
     { label: "O₃", value: aqi.o3, unit: "µg/m³", scale: 180 },
+    { label: "SO₂", value: aqi.so2 ?? 0, unit: "µg/m³", scale: 350 },
   ];
+  const [open, setOpen] = useState(false);
+  const active = pollutants.filter(p => (p.value ?? 0) > 0);
+  const faceList = active.length ? active : pollutants.slice(0, 2);
   return (
-    <div className="relative overflow-hidden glass-card p-5 shadow-card">
+    <>
+    <div onClick={() => setOpen(true)} role="button" tabIndex={0}
+      onKeyDown={e => e.key === "Enter" && setOpen(true)}
+      className="relative cursor-pointer overflow-hidden glass-card p-5 shadow-card transition hover:scale-[1.005]">
       <BreezeFX severity={severityRank[aqi.level]} />
       <div className="relative mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -31,7 +40,7 @@ export function AqiCard({ aqi }: { aqi: AqiData }) {
         </p>
       </div>
       <div className="relative grid grid-cols-2 gap-x-4 gap-y-3">
-        {pollutants.map(p => (
+        {faceList.map(p => (
           <div key={p.label}>
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{p.label}</span>
@@ -48,7 +57,26 @@ export function AqiCard({ aqi }: { aqi: AqiData }) {
         <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
         <p className="text-xs text-foreground/85">{aqiAdvice(aqi.level, aqi.dominantPollutant)}</p>
       </div>
+      <p className="relative mt-2 text-center text-[10px] uppercase tracking-widest text-muted-foreground">Tap for every pollutant</p>
     </div>
+
+    <DetailModal open={open} onClose={() => setOpen(false)} title="Air quality breakdown">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {pollutants.map(p => (
+          <div key={p.label}>
+            <div className="mb-1 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{p.label}</span>
+              <span className="tabular text-foreground/80">{p.value.toFixed(1)}</span>
+            </div>
+            <SeverityBar level={aqi.level} value={Math.min(1, p.value / p.scale)} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 rounded-2xl bg-secondary/40 p-3 text-xs text-foreground/85">
+        {aqiAdvice(aqi.level, aqi.dominantPollutant)}
+      </div>
+    </DetailModal>
+    </>
   );
 }
 
