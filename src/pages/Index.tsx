@@ -390,6 +390,49 @@ function TabBtn({ active, onClick, label, children }: {
   );
 }
 
+/** Slow, delicate snowflakes drifting behind the card stack. */
+function SnowDrift() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {Array.from({ length: 46 }).map((_, i) => {
+        const size = 2 + ((i * 7) % 5);
+        return (
+          <span
+            key={i}
+            className="absolute rounded-full bg-white/85"
+            style={{
+              left: `${(i * 13.7) % 100}%`,
+              top: "-6%",
+              width: size,
+              height: size,
+              boxShadow: "0 0 6px rgba(255,255,255,.8)",
+              animation: `fx-snow ${10 + (i % 9)}s linear ${(i % 11) * 0.9}s infinite`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function TabBtnLegacy({ active, onClick, label, children }: {
+  active: boolean; onClick: () => void; label: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl py-2 transition active:scale-95 ${active
+        ? "bg-primary/20 text-primary shadow-inner"
+        : "text-muted-foreground hover:text-foreground"}`}
+    >
+      {children}
+      <span className="text-[11px] font-semibold">{label}</span>
+    </button>
+  );
+}
+
 /** Clock reading in the location's own timezone. */
 function fmtClock(ms: number, tz: string): string {
   return new Intl.DateTimeFormat("en-GB", {
