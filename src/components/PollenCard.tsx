@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { PollenData } from "@/lib/types";
+import { DetailModal } from "./ui/detail-modal";
 import { SeverityBadge } from "./SeverityBadge";
 import { SeverityBar } from "./SeverityBar";
 import { pollenSeverity, severityLabel } from "@/lib/severity";
@@ -17,8 +19,16 @@ const SPECIES: { key: keyof PollenData["breakdown"]; label: string }[] = [
 
 export function PollenCard({ pollen }: { pollen: PollenData }) {
   const max = Math.max(1, ...Object.values(pollen.breakdown));
+  const [open, setOpen] = useState(false);
+  // Card face shows only the allergens actually in the air; the tap-through
+  // modal lists every species, zeros included.
+  const active = SPECIES.filter(s => (pollen.breakdown[s.key] ?? 0) > 0);
+  const faceList = active.length ? active : SPECIES.slice(0, 1);
   return (
-    <div className="relative overflow-hidden glass-card p-5 shadow-card">
+    <>
+    <div onClick={() => setOpen(true)} role="button" tabIndex={0}
+      onKeyDown={e => e.key === "Enter" && setOpen(true)}
+      className="relative cursor-pointer overflow-hidden glass-card p-5 shadow-card transition hover:scale-[1.005]">
       <PollenFX severity={severityRank[pollen.level]} />
       <div className="relative mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -36,7 +46,7 @@ export function PollenCard({ pollen }: { pollen: PollenData }) {
         </p>
       </div>
       <div className="relative space-y-2.5">
-        {SPECIES.map(s => {
+        {faceList.map(s => {
           const v = pollen.breakdown[s.key] ?? 0;
           return (
             <div key={s.key}>
@@ -53,7 +63,29 @@ export function PollenCard({ pollen }: { pollen: PollenData }) {
         <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
         <p className="text-xs text-foreground/85">{pollenAdvice(pollen.level, pollen.dominantSpecies)}</p>
       </div>
+      <p className="relative mt-2 text-center text-[10px] uppercase tracking-widest text-muted-foreground">Tap for the full breakdown</p>
     </div>
+
+    <DetailModal open={open} onClose={() => setOpen(false)} title="Pollen breakdown">
+      <div className="space-y-2.5">
+        {SPECIES.map(s => {
+          const v = pollen.breakdown[s.key] ?? 0;
+          return (
+            <div key={s.key}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{s.label}</span>
+                <span className="tabular text-foreground/80">{v.toFixed(1)}</span>
+              </div>
+              <SeverityBar level={pollenSeverity(v)} value={v / max} />
+            </div>
+          );
+        })}
+        <div className="rounded-2xl bg-secondary/40 p-3 text-xs text-foreground/85">
+          {pollenAdvice(pollen.level, pollen.dominantSpecies)}
+        </div>
+      </div>
+    </DetailModal>
+    </>
   );
 }
 

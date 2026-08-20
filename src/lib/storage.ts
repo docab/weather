@@ -57,3 +57,31 @@ export function loadPrefs(): NotificationPrefs {
 export function savePrefs(p: NotificationPrefs) {
   localStorage.setItem(PREFS_KEY, JSON.stringify(p));
 }
+/* -----------------------------------------------------------------------
+ * Custom nicknames. Kept in their own map so the auto-detected location
+ * (which never lands in the saved list) can be renamed too.
+ * --------------------------------------------------------------------- */
+const NAMES_KEY = "pw.locationNames";
+
+export function loadNameOverrides(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(NAMES_KEY) || "{}"); }
+  catch { return {}; }
+}
+export function saveNameOverride(id: string, name: string | undefined): Record<string, string> {
+  const map = loadNameOverrides();
+  const clean = name?.trim();
+  if (clean) map[id] = clean; else delete map[id];
+  localStorage.setItem(NAMES_KEY, JSON.stringify(map));
+  return map;
+}
+
+/** Move a saved location up (-1) or down (+1) in the ordering. */
+export function reorderLocations(list: Location[], id: string, dir: -1 | 1): Location[] {
+  const i = list.findIndex(l => l.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return list;
+  const next = [...list];
+  [next[i], next[j]] = [next[j], next[i]];
+  saveLocations(next);
+  return next;
+}

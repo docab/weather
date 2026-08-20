@@ -375,4 +375,61 @@
     position: absolute; inset: 0; pointer-events: none;
     background: transparent;
   }
+
+  @keyframes fx-ripple {
+    0%   { transform: scale(.3); opacity: .9; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes fx-drip {
+    0%   { transform: translateY(-8px); opacity: 0; }
+    15%  { opacity: .85; }
+    100% { transform: translateY(120px); opacity: 0; }
+  }
+
+  /* -------------------------------------------------------------------
+   * Physical environmental card effects. A weather class is set on the app
+   * root; every liquid-glass card then picks up frost crystals, a snow cap
+   * along its top rim, or condensation droplets running down the glass.
+   * ----------------------------------------------------------------- */
+  .env-frost .glass-card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    border-radius: inherit; z-index: 2;
+    background:
+      radial-gradient(60px 40px at 0% 0%,   rgba(255,255,255,.55), transparent 70%),
+      radial-gradient(70px 46px at 100% 0%, rgba(255,255,255,.5),  transparent 70%),
+      radial-gradient(50px 34px at 0% 100%, rgba(226,244,255,.4),  transparent 72%),
+      radial-gradient(56px 36px at 100% 100%, rgba(226,244,255,.4), transparent 72%),
+      repeating-linear-gradient(115deg, rgba(255,255,255,.12) 0 2px, transparent 2px 7px);
+    mix-blend-mode: screen;
+    opacity: .85;
+  }
+  .env-frost .glass-card {
+    border-color: rgba(226, 246, 255, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 8px 32px rgba(10,30,60,.18);
+  }
+  .env-snow .glass-card::after {
+    content: ""; position: absolute; left: 6px; right: 6px; top: -4px; height: 10px;
+    pointer-events: none; z-index: 3;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #ffffff 0%, rgba(240,248,255,.95) 55%, rgba(220,235,250,.25) 100%);
+    filter: blur(0.6px) drop-shadow(0 2px 3px rgba(20,40,70,.25));
+  }
+  .env-rain .glass-card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    border-radius: inherit; z-index: 2; overflow: hidden;
+    background:
+      radial-gradient(3px 4px at 18% 22%, rgba(255,255,255,.55), transparent 70%),
+      radial-gradient(2px 3px at 34% 58%, rgba(255,255,255,.45), transparent 70%),
+      radial-gradient(4px 5px at 62% 18%, rgba(255,255,255,.5),  transparent 70%),
+      radial-gradient(2px 3px at 78% 66%, rgba(255,255,255,.42), transparent 70%),
+      radial-gradient(3px 4px at 88% 34%, rgba(255,255,255,.5),  transparent 70%),
+      radial-gradient(2px 2px at 48% 82%, rgba(255,255,255,.4),  transparent 70%),
+      linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%);
+  }
+  .env-rain .glass-card::after {
+    content: ""; position: absolute; top: 0; right: 14%; width: 2px; height: 40px;
+    pointer-events: none; z-index: 3; border-radius: 9999px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.65));
+    animation: fx-drip 3.6s linear infinite;
+  }
 }

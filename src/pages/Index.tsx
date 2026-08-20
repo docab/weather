@@ -9,12 +9,15 @@ import { TravelView } from "@/components/TravelView";
 import { MeView } from "@/components/MeView";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useConditionsForLocations } from "@/hooks/useConditions";
-import { loadLocations, loadPrimaryId, savePrimaryId, saveLocations } from "@/lib/storage";
+import {
+  loadLocations, loadPrimaryId, savePrimaryId, saveLocations,
+  loadNameOverrides, saveNameOverride, reorderLocations,
+} from "@/lib/storage";
 import type { Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LocateFixed, AlertCircle, Eye, CalendarDays, Sunrise, User, Plane, MapPin, ChevronDown, Plus, RotateCw } from "lucide-react";
 import { WeatherFX, AuroraFX, MeteorFX } from "@/components/fx/WeatherFX";
-import { skyOnlyStyle, sunPhaseOf, describeWeather, gradientInk, thermalTint } from "@/lib/weatherCodes";
+import { skyOnlyStyle, sunPhaseOf, describeWeather, gradientInk, thermalTint, scrollTint } from "@/lib/weatherCodes";
 import { activeShowers } from "@/lib/meteor";
 
 const MAX_LOCATIONS = 10;
@@ -26,6 +29,7 @@ const TAB_ORDER: TabKey[] = ["briefing", "today", "forecast", "stars", "travel",
 const Index = () => {
   const geo = useGeolocation();
   const [savedLocations, setSavedLocations] = useState<Location[]>(() => loadLocations());
+  const [nameMap, setNameMap] = useState<Record<string, string>>(() => loadNameOverrides());
   const [activeId, setActiveId] = useState<string>("");
   const [addOpen, setAddOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("today");
@@ -37,8 +41,9 @@ const Index = () => {
     for (const l of savedLocations) {
       if (!geo.location || l.id !== geo.location.id) list.push(l);
     }
-    return list.slice(0, MAX_LOCATIONS);
-  }, [geo.location, savedLocations]);
+    return list.slice(0, MAX_LOCATIONS).map(l =>
+      nameMap[l.id] ? { ...l, customName: nameMap[l.id] } : l);
+  }, [geo.location, savedLocations, nameMap]);
 
   // Initialise active tab
   useEffect(() => {
@@ -76,6 +81,16 @@ const Index = () => {
   const handleSelect = (id: string) => {
     setActiveId(id);
     savePrimaryId(id);
+  };
+
+  /** Give a place a nickname ("Home", "Work"). Empty string clears it. */
+  const renamePlace = (id: string, name: string) => {
+    setNameMap({ ...saveNameOverride(id, name) });
+  };
+
+  /** Nudge a saved place up or down the list. */
+  const movePlace = (id: string, dir: -1 | 1) => {
+    setSavedLocations(reorderLocations(savedLocations, id, dir));
   };
 
   // Swipe-to-change-tab intentionally removed — tab content stays fixed to
@@ -143,6 +158,24 @@ const Index = () => {
   // Ambient thermal tint for the whole app shell (cards inherit it through
   // --background). The live sky lives inside the hero only.
   const thermal = activeWeather ? thermalTint(activeWeather.feelsLike) : "220 22% 10%";
+  // Vivid, saturated version used for the scroll-activated canvas wash.
+  const vivid = activeWeather
+    ? scrollTint(activeWeather.feelsLike, {
+        weatherCode: activeWeather.weatherCode,
+        precipMm: activeWeather.precipMm,
+        isDay: activeWeather.isDay,
+      })
+    : thermal;
+
+  // Physical weather effects on the glass cards: frost below zero, a snow cap
+  // during snowfall, condensation streaks while it rains.
+  const code = activeWeather?.weatherCode ?? 0;
+  const snowing = (code >= 71 && code <= 77) || code === 85 || code === 86;
+  const raining = !snowing && (((activeWeather?.precipMm ?? 0) > 0.05) ||
+    (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95);
+  const freezing = (activeWeather?.temp ?? 10) < 0;
+  const envClass = [snowing && "env-snow", freezing && "env-frost", raining && "env-rain"]
+    .filter(Boolean).join(" ");
 
   // ------------------------------------------------------------------
   // Scroll-driven temperature tint. At the top of the page the canvas is
@@ -179,7 +212,7 @@ const Index = () => {
 
   return (
     <div
-      className={`relative isolate min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"}`}
+      className={`relative isolate min-h-[100dvh] pb-32 ${ink === "dark" ? "ink-dark" : "ink-light"} ${envClass}`}
       style={{ "--thermal-bg": thermal } as React.CSSProperties}
     >
       {/* Fixed, page-wide animated sky backdrop driven by the active location.
@@ -193,10 +226,12 @@ const Index = () => {
         <div
           className="absolute inset-0 transition-opacity duration-300"
           style={{
-            background: `linear-gradient(180deg, hsl(${thermal} / 0.35) 0%, hsl(${thermal} / 0.92) 55%, hsl(${thermal}) 100%)`,
+            background: `linear-gradient(180deg, hsl(${vivid} / 0.42) 0%, hsl(${vivid} / 0.94) 55%, hsl(${vivid}) 100%)`,
             opacity: tintK,
           }}
         />
+        {/* Delicate snowflakes drifting behind the cards. */}
+        {snowing && <SnowDrift />}
       </div>
 
       {showLocationHeader && (
@@ -260,6 +295,8 @@ const Index = () => {
                   queries={queries}
                   onOpenLocation={(id) => { handleSelect(id); setActiveTab("today"); }}
                   onRemoveLocation={removeLocation}
+                  onRenameLocation={renamePlace}
+                  onMoveLocation={movePlace}
                 />
                 {allLocations.length < MAX_LOCATIONS && (
                   <div className="mt-3 flex justify-center">
@@ -367,6 +404,31 @@ function TabBtn({ active, onClick, label, children }: {
       {children}
       <span className="text-[11px] font-semibold">{label}</span>
     </button>
+  );
+}
+
+/** Slow, delicate snowflakes drifting behind the card stack. */
+function SnowDrift() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {Array.from({ length: 46 }).map((_, i) => {
+        const size = 2 + ((i * 7) % 5);
+        return (
+          <span
+            key={i}
+            className="absolute rounded-full bg-white/85"
+            style={{
+              left: `${(i * 13.7) % 100}%`,
+              top: "-6%",
+              width: size,
+              height: size,
+              boxShadow: "0 0 6px rgba(255,255,255,.8)",
+              animation: `fx-snow ${10 + (i % 9)}s linear ${(i % 11) * 0.9}s infinite`,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
