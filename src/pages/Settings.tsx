@@ -113,21 +113,37 @@ export default function Settings() {
         {/* Locations */}
         <Section title="Locations" subtitle="Up to 10 — your current location plus 9 saved">
           <div className="space-y-2">
-            {allLocations.map(loc => (
+            {allLocations.map(loc => {
+              const savedIdx = locations.findIndex(l => l.id === loc.id);
+              const nick = names[loc.id] || loc.customName;
+              return (
               <div key={loc.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
                     {loc.isAutoDetected ? <Locate className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
                   </div>
                   <div>
-                    <div className="font-medium">{loc.name}</div>
+                    <div className="font-medium">{displayName(loc)}</div>
                     <div className="text-xs text-muted-foreground">
-                      {[loc.postcode, loc.region, loc.isAutoDetected && "Auto-detected"]
+                      {[nick ? loc.name : null, loc.postcode, loc.region, loc.isAutoDetected && "Auto-detected"]
                         .filter(Boolean).join(" · ")}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
+                  {savedIdx > 0 && (
+                    <Button variant="ghost" size="icon" aria-label="Move up" onClick={() => move(loc.id, -1)}>
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  {savedIdx >= 0 && savedIdx < locations.length - 1 && (
+                    <Button variant="ghost" size="icon" aria-label="Move down" onClick={() => move(loc.id, 1)}>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" aria-label="Rename" onClick={() => rename(loc)}>
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -150,7 +166,8 @@ export default function Settings() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
             <div className="flex flex-wrap gap-2 pt-1">
               {!geo.location && (
                 <Button variant="secondary" size="sm" onClick={geo.request} disabled={geo.loading}>
