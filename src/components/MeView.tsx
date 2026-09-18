@@ -103,6 +103,13 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
         </Link>
       </div>
 
+      {/* Personal thermal perception */}
+      <PerceptionCard
+        feelsLike={conditions.weather.feelsLike}
+        actual={conditions.weather.temp}
+        sensitivity={prefs.tempSensitivity}
+      />
+
       {/* Greeting + lifestyle score */}
       <div className="glass-card p-5 shadow-card">
         <div className="flex items-start justify-between gap-3">
