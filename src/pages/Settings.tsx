@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeft, Bell, BellOff, Locate, MapPin, Star, StarOff, Trash2, Plus, CloudSun
+  ArrowLeft, Bell, BellOff, Locate, MapPin, Star, StarOff, Trash2, Plus, CloudSun,
+  Pencil, ChevronUp, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  loadLocations, loadPrefs, loadPrimaryId, saveLocations, savePrefs, savePrimaryId
+  loadLocations, loadPrefs, loadPrimaryId, saveLocations, savePrefs, savePrimaryId,
+  loadNameOverrides, saveNameOverride, reorderLocations
 } from "@/lib/storage";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
