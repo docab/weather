@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeft, Bell, BellOff, Locate, MapPin, Star, StarOff, Trash2, Plus, CloudSun
+  ArrowLeft, Bell, BellOff, Locate, MapPin, Star, StarOff, Trash2, Plus, CloudSun,
+  Pencil, ChevronUp, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  loadLocations, loadPrefs, loadPrimaryId, saveLocations, savePrefs, savePrimaryId
+  loadLocations, loadPrefs, loadPrimaryId, saveLocations, savePrefs, savePrimaryId,
+  loadNameOverrides, saveNameOverride, reorderLocations
 } from "@/lib/storage";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
@@ -25,6 +27,20 @@ export default function Settings() {
   const [primaryId, setPrimaryId] = useState<string>(() => loadPrimaryId() ?? "");
   const [prefs, setPrefs] = useState<NotificationPrefs>(() => loadPrefs());
   const [addOpen, setAddOpen] = useState(false);
+  const [names, setNames] = useState<Record<string, string>>(() => loadNameOverrides());
+
+  const displayName = (loc: Location) => names[loc.id] || loc.customName || loc.name;
+
+  const rename = (loc: Location) => {
+    const next = window.prompt(`What should we call ${loc.name}?`, names[loc.id] || "");
+    if (next === null) return;
+    setNames(saveNameOverride(loc.id, next.trim() || undefined));
+    toast({ title: next.trim() ? `Renamed to ${next.trim()}` : "Nickname removed" });
+  };
+
+  const move = (id: string, dir: -1 | 1) => {
+    setLocations(prev => reorderLocations(prev, id, dir));
+  };
 
   const allLocations: Location[] = useMemo(() => {
     const list: Location[] = [];
@@ -97,21 +113,37 @@ export default function Settings() {
         {/* Locations */}
         <Section title="Locations" subtitle="Up to 10 — your current location plus 9 saved">
           <div className="space-y-2">
-            {allLocations.map(loc => (
+            {allLocations.map(loc => {
+              const savedIdx = locations.findIndex(l => l.id === loc.id);
+              const nick = names[loc.id] || loc.customName;
+              return (
               <div key={loc.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
                     {loc.isAutoDetected ? <Locate className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
                   </div>
                   <div>
-                    <div className="font-medium">{loc.name}</div>
+                    <div className="font-medium">{displayName(loc)}</div>
                     <div className="text-xs text-muted-foreground">
-                      {[loc.postcode, loc.region, loc.isAutoDetected && "Auto-detected"]
+                      {[nick ? loc.name : null, loc.postcode, loc.region, loc.isAutoDetected && "Auto-detected"]
                         .filter(Boolean).join(" · ")}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
+                  {savedIdx > 0 && (
+                    <Button variant="ghost" size="icon" aria-label="Move up" onClick={() => move(loc.id, -1)}>
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  {savedIdx >= 0 && savedIdx < locations.length - 1 && (
+                    <Button variant="ghost" size="icon" aria-label="Move down" onClick={() => move(loc.id, 1)}>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" aria-label="Rename" onClick={() => rename(loc)}>
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -134,7 +166,8 @@ export default function Settings() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
             <div className="flex flex-wrap gap-2 pt-1">
               {!geo.location && (
                 <Button variant="secondary" size="sm" onClick={geo.request} disabled={geo.loading}>

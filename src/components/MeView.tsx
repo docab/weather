@@ -103,6 +103,13 @@ export function MeView({ conditions }: { conditions: LocationConditions | undefi
         </Link>
       </div>
 
+      {/* Personal thermal perception */}
+      <PerceptionCard
+        feelsLike={conditions.weather.feelsLike}
+        actual={conditions.weather.temp}
+        sensitivity={prefs.tempSensitivity}
+      />
+
       {/* Greeting + lifestyle score */}
       <div className="glass-card p-5 shadow-card">
         <div className="flex items-start justify-between gap-3">
@@ -398,6 +405,37 @@ function ActivityCard({ r, tz }: { r: ReturnType<typeof scoreActivity>; tz: stri
           <Clock className="h-3 w-3" /> Better window around {bestT} (~{r.best!.score})
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Personal thermal perception. Shifts the official "feels like" by the
+ * user's own sensitivity dial (-3 runs cold … +3 runs hot, ~1.5°C a notch).
+ */
+function PerceptionCard({ feelsLike, actual, sensitivity }: { feelsLike: number; actual: number; sensitivity: number }) {
+  const offset = sensitivity * 1.5;
+  const perceived = feelsLike + offset;
+  const warmer = offset > 0.2;
+  const cooler = offset < -0.2;
+  const label = warmer ? "Warmer for you" : cooler ? "Cooler for you" : "Right about average for you";
+  return (
+    <div className="glass-card p-5 shadow-card">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">How it lands on you</div>
+          <h3 className="mt-1 text-lg font-bold">{label}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {warmer || cooler
+              ? `It's ${Math.round(actual)}° out there and officially feels like ${Math.round(feelsLike)}° — closer to ${Math.round(perceived)}° for you, going by how you said the ${warmer ? "heat" : "cold"} hits you.`
+              : `It's ${Math.round(actual)}° out there and feels like ${Math.round(feelsLike)}° — that's about how you'll read it too.`}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="text-3xl font-bold leading-none">{Math.round(perceived)}°</div>
+          <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">for you</div>
+        </div>
+      </div>
     </div>
   );
 }
