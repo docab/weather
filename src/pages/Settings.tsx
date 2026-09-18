@@ -27,6 +27,20 @@ export default function Settings() {
   const [primaryId, setPrimaryId] = useState<string>(() => loadPrimaryId() ?? "");
   const [prefs, setPrefs] = useState<NotificationPrefs>(() => loadPrefs());
   const [addOpen, setAddOpen] = useState(false);
+  const [names, setNames] = useState<Record<string, string>>(() => loadNameOverrides());
+
+  const displayName = (loc: Location) => names[loc.id] || loc.customName || loc.name;
+
+  const rename = (loc: Location) => {
+    const next = window.prompt(`What should we call ${loc.name}?`, names[loc.id] || "");
+    if (next === null) return;
+    setNames(saveNameOverride(loc.id, next.trim() || undefined));
+    toast({ title: next.trim() ? `Renamed to ${next.trim()}` : "Nickname removed" });
+  };
+
+  const move = (id: string, dir: -1 | 1) => {
+    setLocations(prev => reorderLocations(prev, id, dir));
+  };
 
   const allLocations: Location[] = useMemo(() => {
     const list: Location[] = [];
